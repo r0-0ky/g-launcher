@@ -77,9 +77,11 @@ git tag v0.2.0 && git push origin main --tags
 
 ### Что нужно настроить один раз
 
-1. **Репозиторий.** Замените `GANDONI-OWNER/gandoni-launcher` в
-   `src-tauri/tauri.conf.json` (`plugins.updater.endpoints`) на свой `owner/repo`.
-   Репозиторий должен быть публичным — иначе ссылки на релизы требуют токена.
+1. **Репозиторий.** Уже прописан — [`r0-0ky/g-launcher`](https://github.com/r0-0ky/g-launcher),
+   адрес обновлений лежит в `src-tauri/tauri.conf.json` (`plugins.updater.endpoints`).
+   Репозиторий должен быть **публичным**: иначе ссылка на релиз потребует токена,
+   и лаунчер не сможет скачать обновление. Переименуете репозиторий — поправьте
+   адрес здесь же и выпустите новую версию.
 2. **Секреты репозитория** (Settings → Secrets and variables → Actions):
 
    | Секрет | Откуда взять |

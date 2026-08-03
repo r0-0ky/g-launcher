@@ -1,7 +1,8 @@
 services:
   gandoni:
-    build: .
-    image: gandoni-launcher-server
+    # Образ собирается в GitHub Actions и приезжает сюда готовым — на VPS
+    # ничего не компилируется. Откат: SERVER_IMAGE=...:sha-<коммит> в .env.
+    image: ${SERVER_IMAGE:?SERVER_IMAGE не задан в .env}
     container_name: gandoni-launcher-server
     restart: unless-stopped
     env_file: .env
@@ -11,6 +12,21 @@ services:
     volumes:
       # База и загруженные моды переживают пересборку контейнера.
       - ./data:/data
-    ports:
-      # Наружу выставляет nginx; локально хватит порта на 127.0.0.1.
-      - "127.0.0.1:8080:8080"
+    # Наружу порт не публикуем: снаружи ходит только Cloudflare Tunnel.
+    # Для отладки на самой машине можно раскомментировать:
+    # ports:
+    #   - "127.0.0.1:8080:8080"
+    expose:
+      - "8080"
+
+  cloudflared:
+    # Держит исходящее соединение с Cloudflare: входящие порты открывать не нужно,
+    # HTTPS и сертификат — на стороне Cloudflare.
+    image: cloudflare/cloudflared:latest
+    container_name: gandoni-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?TUNNEL_TOKEN не задан в .env}
+    depends_on:
+      - gandoni

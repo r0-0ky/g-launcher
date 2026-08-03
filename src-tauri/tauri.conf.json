@@ -30,7 +30,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBREQwNTAzNDg3MDEzREEKUldUYUUzQklBd1hkV25rb25tSFN0Tml1d1Q0d3F1amRoZkZFRnN4UDhDbERnakx6dmMza0xOd0kK",
       "endpoints": [
-        "https://github.com/GANDONI-OWNER/gandoni-launcher/releases/latest/download/latest.json"
+        "https://github.com/r0-0ky/g-launcher/releases/latest/download/latest.json"
       ]
     }
   },

@@ -22,39 +22,111 @@ npm run dev                   # API на :8080, админка (Vite) на :5174
 Прод-версия (собранная админка на том же порту, что и API) — `npm run build && npm start`,
 затем http://localhost:8080/admin.
 
-## Деплой на VPS через Docker
+## Деплой на VPS
 
-Нужен сервер с Docker, доменом и открытыми портами 80/443.
+Схема: пуш в `main` → GitHub Actions собирает Docker-образ и кладёт в GHCR → по SSH
+даёт VPS команду забрать образ и перезапуститься. Наружу сервер смотрит через
+Cloudflare Tunnel, поэтому открытых портов, nginx и certbot не нужно вовсе.
 
-```bash
-# 1. Скопируй папку server/ на VPS (scp/git/rsync), зайди в неё
-cd server
-
-# 2. Настрой окружение
-cp .env.example .env
-nano .env
-#   ADMIN_PASSWORD=длинный-случайный-пароль
-#   PUBLIC_URL=https://launcher.example.com   ← твой домен
-
-# 3. Собери и запусти
-docker compose up -d --build
-
-# 4. Проверь, что живой
-curl http://127.0.0.1:8080/health      # {"ok":true}
+```
+push → GitHub Actions → ghcr.io/r0-0ky/g-launcher/server:latest
+                              ↓ ssh: docker compose pull && up -d
+                    VPS: gandoni ← cloudflared ← Cloudflare ← игроки
 ```
 
-Контейнер слушает только `127.0.0.1:8080` — наружу его выставляет nginx.
+Сборка идёт на раннере GitHub — VPS не компилирует `better-sqlite3` и не нагружается.
 
-### nginx + HTTPS
+### 1. Подготовка VPS
+
+Нужен сервер с Ubuntu/Debian и SSH-доступом. Домен должен быть добавлен в Cloudflare
+(NS-серверы Cloudflare), но DNS-записи руками создавать не надо — туннель сделает сам.
 
 ```bash
-sudo apt install nginx certbot python3-certbot-nginx
-sudo cp nginx.conf.example /etc/nginx/sites-available/launcher.example.com
-sudo nano /etc/nginx/sites-available/launcher.example.com   # заменить домен
-sudo ln -s /etc/nginx/sites-available/launcher.example.com /etc/nginx/sites-enabled/
-sudo certbot --nginx -d launcher.example.com                # выпустит сертификат
-sudo nginx -t && sudo systemctl reload nginx
+# на VPS, один раз
+curl -fsSL https://raw.githubusercontent.com/r0-0ky/g-launcher/main/server/deploy/bootstrap.sh | sudo bash
 ```
+
+Скрипт ставит Docker, создаёт `/opt/gandoni` и шаблон `.env` с уже подставленным
+репозиторием. Заполнить руками надо два поля: `ADMIN_PASSWORD` (длинный случайный)
+и `PUBLIC_URL` (твой домен), плюс `TUNNEL_TOKEN` из следующего шага.
+
+### 2. Cloudflare Tunnel
+
+1. Cloudflare → **Zero Trust** → Networks → **Tunnels** → Create a tunnel → **Cloudflared**.
+2. Назови туннель, на шаге «Install and run a connector» скопируй **токен** — строку
+   после `--token`. Сам коннектор ставить не надо: его поднимет `docker compose`.
+   Токен → в `TUNNEL_TOKEN` в `/opt/gandoni/.env`.
+3. Вкладка **Public Hostname** → Add a public hostname:
+   - Subdomain/Domain: `launcher.example.com`
+   - Type: **HTTP**, URL: **`gandoni:8080`** — это имя сервиса из `docker-compose.yml`,
+     контейнеры видят друг друга по нему.
+
+Сертификат и HTTPS Cloudflare берёт на себя. Входящие порты на VPS можно закрыть все,
+кроме SSH — туннель работает исходящим соединением.
+
+### 3. Доступ для GitHub Actions
+
+На VPS создай ключ для деплоя (без пароля — им пользуется робот):
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/gandoni-deploy -N "" -C "github-actions"
+cat ~/.ssh/gandoni-deploy.pub >> ~/.ssh/authorized_keys
+cat ~/.ssh/gandoni-deploy          # приватный — в секрет VPS_SSH_KEY
+ssh-keyscan -H "$(curl -s ifconfig.me)"   # строки — в секрет VPS_KNOWN_HOSTS
+```
+
+Секреты репозитория (Settings → Secrets and variables → Actions):
+
+| Секрет | Значение |
+| --- | --- |
+| `VPS_HOST` | IP или домен сервера |
+| `VPS_USER` | пользователь SSH |
+| `VPS_SSH_KEY` | приватный ключ целиком, вместе со строками `-----BEGIN...` |
+| `VPS_PATH` | `/opt/gandoni` (необязательно, это же значение по умолчанию) |
+| `VPS_PORT` | порт SSH, если не 22 (необязательно) |
+| `VPS_KNOWN_HOSTS` | вывод `ssh-keyscan` (необязательно, но так безопаснее) |
+
+И один раз открой доступ к образу — он появится после первой сборки:
+[github.com/r0-0ky?tab=packages](https://github.com/r0-0ky?tab=packages) →
+`g-launcher/server` → Package settings → **Change visibility → Public**.
+Иначе VPS не сможет его скачать без логина в GHCR.
+
+### 4. Первый деплой
+
+Пушни в `main` — [`deploy-server.yml`](../.github/workflows/deploy-server.yml) соберёт
+образ, зальёт `docker-compose.yml` на сервер, поднимет контейнеры и дождётся, пока
+healthcheck станет `healthy`. Если контейнер не поднялся, workflow упадёт и покажет
+последние 50 строк логов.
+
+Дальше каждый пуш в `main` деплоится сам. Ручной запуск — кнопка **Run workflow**.
+
+### Откат
+
+```bash
+# на VPS
+cd /opt/gandoni
+nano .env      # SERVER_IMAGE=ghcr.io/r0-0ky/g-launcher/server:sha-<коммит>
+docker compose up -d
+```
+
+Каждая сборка тегируется и как `latest`, и как `sha-<коммит>`, так что вернуться
+на любую прошлую версию можно за секунды.
+
+### Ограничения Cloudflare
+
+- **100 МБ на запрос** на бесплатном тарифе. Модов тяжелее этого почти не бывает,
+  но `MAX_UPLOAD_MB=95` в `.env` заставит админку ругаться понятной ошибкой вместо
+  обрыва загрузки. Если такой мод всё же нужен — залей файл на VPS и подложи в
+  `data/files` вручную либо временно открой порт напрямую.
+- Ответ должен начаться за 100 секунд, иначе Cloudflare отдаст 524. На раздачу
+  jar-ов это не влияет — они отдаются сразу.
+- `.jar` попадает под стандартное кэширование Cloudflare, а файлы у нас адресуются
+  по SHA-1 и помечены `immutable` — то есть моды игрокам раздаёт CDN, а не твой VPS.
+  Это бонус, а не проблема.
+
+Если Cloudflare не нужен, старая схема с nginx и certbot никуда не делась —
+[`nginx.conf.example`](nginx.conf.example) на месте, надо только вернуть в
+`docker-compose.yml` публикацию порта `127.0.0.1:8080:8080` и убрать сервис `cloudflared`.
 
 Готово. Теперь:
 
@@ -69,7 +141,7 @@ sudo nginx -t && sudo systemctl reload nginx
 Данные берутся из релизов GitHub — задай в `.env`:
 
 ```
-GITHUB_REPO=owner/gandoni-launcher
+GITHUB_REPO=r0-0ky/g-launcher
 ```
 
 Ответ GitHub кэшируется на 5 минут, наружу отдаётся своим же адресом
@@ -79,15 +151,21 @@ IP), добавь `GITHUB_TOKEN` с правом чтения публичных
 Сами файлы лежат на GitHub — сервер их не хранит и не раздаёт, так что трафик
 загрузок его не касается.
 
-### Обновление и бэкап
+### Бэкап и диагностика
 
 ```bash
-git pull                       # или залей новую версию
-docker compose up -d --build   # пересборка без простоя данных
+cd /opt/gandoni
 
-# бэкап — просто папка data
+# бэкап — просто папка data (база + залитые моды)
 tar czf gandoni-backup-$(date +%F).tgz data
+
+docker compose ps                      # статус и здоровье контейнеров
+docker compose logs -f gandoni         # логи сервера
+docker compose logs -f cloudflared     # логи туннеля, если домен не отвечает
+docker compose exec gandoni node -e "fetch('http://127.0.0.1:8080/health').then(r=>r.text()).then(console.log)"
 ```
+
+Обновление кодом отдельно запускать не надо — его делает пуш в `main`.
 
 ## Как пользоваться админкой
 
