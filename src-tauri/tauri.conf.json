@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Gandoni Launcher",
+  "version": "../package.json",
+  "identifier": "com.gandoni.launcher",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Gandoni Launcher",
+        "width": 1160,
+        "height": 720,
+        "minWidth": 940,
+        "minHeight": 620,
+        "resizable": true,
+        "center": true,
+        "theme": "Dark"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: https: http:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBREQwNTAzNDg3MDEzREEKUldUYUUzQklBd1hkV25rb25tSFN0Tml1d1Q0d3F1amRoZkZFRnN4UDhDbERnakx6dmMza0xOd0kK",
+      "endpoints": [
+        "https://github.com/GANDONI-OWNER/gandoni-launcher/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "resources": ["resources/quickjoin/*.jar"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Game",
+    "shortDescription": "Лаунчер Minecraft",
+    "longDescription": "Лаунчер Minecraft: выбор режима, авто-загрузка версии и модов, обновление и запуск игры."
+  }
+}

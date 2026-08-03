@@ -1,0 +1,16 @@
+services:
+  gandoni:
+    build: .
+    image: gandoni-launcher-server
+    container_name: gandoni-launcher-server
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+      PORT: 8080
+    volumes:
+      # База и загруженные моды переживают пересборку контейнера.
+      - ./data:/data
+    ports:
+      # Наружу выставляет nginx; локально хватит порта на 127.0.0.1.
+      - "127.0.0.1:8080:8080"

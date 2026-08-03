@@ -1,0 +1,140 @@
+import type { Mode, ProgressEvent, UpdateReport } from "../api";
+import { formatBytes, loaderLabel } from "../api";
+import { Jellyfish, Starfish } from "./decor";
+
+interface Props {
+  mode: Mode;
+  report: UpdateReport | null;
+  progress: ProgressEvent | null;
+  busy: boolean;
+  running: boolean;
+  onPlay: () => void;
+  onUpdate: () => void;
+  onVerify: () => void;
+  onStop: () => void;
+  onOpenFolder: () => void;
+  onDelete: () => void;
+}
+
+function actionLabel(report: UpdateReport | null, running: boolean, busy: boolean) {
+  if (running) return "Игра запущена";
+  if (busy) return "Работаем…";
+  if (!report || !report.installed) return "Установить и играть";
+  if (report.needsUpdate) return "Обновить и играть";
+  return "Играть";
+}
+
+export function ModeView({
+  mode,
+  report,
+  progress,
+  busy,
+  running,
+  onPlay,
+  onUpdate,
+  onVerify,
+  onStop,
+  onOpenFolder,
+  onDelete,
+}: Props) {
+  const percent = progress ? Math.round(progress.percent) : 0;
+
+  return (
+    <section className="mode-view">
+      <header
+        className="hero"
+        style={mode.banner ? { backgroundImage: `url(${mode.banner})` } : undefined}
+      >
+        {!mode.banner && <Jellyfish className="hero-jelly" />}
+        {!mode.banner && <Starfish className="hero-star" />}
+        <div className="hero-overlay">
+          <h1>{mode.name}</h1>
+          <p>{mode.description}</p>
+          <div className="chips">
+            <span className="chip">Minecraft {mode.minecraft}</span>
+            <span className="chip">{loaderLabel(mode)}</span>
+            {mode.version && <span className="chip">Сборка {mode.version}</span>}
+            <span className="chip">{mode.files.length} файлов</span>
+            {mode.server && (
+              <span className="chip">
+                {mode.server.host}:{mode.server.port}
+              </span>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="status-card">
+        {busy && progress ? (
+          <>
+            <div className="status-line">
+              <strong>{progress.stage}</strong>
+              <span>{percent}%</span>
+            </div>
+            <div className="progress">
+              <div className="progress-bar" style={{ width: `${percent}%` }} />
+            </div>
+            <div className="status-detail">
+              <span>{progress.message}</span>
+              <span>
+                {progress.filesTotal > 0 && `${progress.filesDone}/${progress.filesTotal} файлов`}
+                {progress.bytesTotal > 0 &&
+                  ` · ${formatBytes(progress.bytesDone)} из ${formatBytes(progress.bytesTotal)}`}
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="status-summary">
+            {report ? (
+              report.needsUpdate ? (
+                <>
+                  <strong>{report.installed ? "Доступно обновление" : "Сборка не установлена"}</strong>
+                  <span>
+                    Скачать: {report.filesToDownload} файл(ов)
+                    {report.downloadBytes > 0 && ` · ${formatBytes(report.downloadBytes)}`}
+                    {report.filesToDelete > 0 && ` · удалить: ${report.filesToDelete}`}
+                  </span>
+                  {report.deleteNames.length > 0 && (
+                    <span className="muted">Будут удалены: {report.deleteNames.slice(0, 6).join(", ")}
+                      {report.deleteNames.length > 6 && " и др."}</span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <strong>Всё актуально</strong>
+                  <span className="muted">Файлы сборки совпадают с манифестом</span>
+                </>
+              )
+            ) : (
+              <span className="muted">Проверяем состояние сборки…</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="actions">
+        <button className="play-button" onClick={onPlay} disabled={busy || running}>
+          {actionLabel(report, running, busy)}
+        </button>
+        {running ? (
+          <button className="ghost-button" onClick={onStop}>
+            Остановить игру
+          </button>
+        ) : (
+          <button className="ghost-button" onClick={onUpdate} disabled={busy}>
+            Только обновить
+          </button>
+        )}
+        <button className="ghost-button" onClick={onVerify} disabled={busy || running}>
+          Проверить файлы
+        </button>
+        <button className="ghost-button" onClick={onOpenFolder}>
+          Папка режима
+        </button>
+        <button className="ghost-button danger" onClick={onDelete} disabled={busy || running}>
+          Удалить
+        </button>
+      </div>
+    </section>
+  );
+}

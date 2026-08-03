@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "gandoni-quickjoin",
+  "version": "${version}",
+  "name": "Gandoni Quick Join",
+  "description": "Добавляет в главное меню кнопку мгновенного захода на сервер режима.",
+  "authors": ["Gandoni"],
+  "license": "MIT",
+  "icon": "assets/gandoni-quickjoin/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.gandoni.quickjoin.QuickJoinClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "*",
+    "fabric-api": "*"
+  }
+}
