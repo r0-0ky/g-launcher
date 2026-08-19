@@ -130,18 +130,6 @@ pub async fn poll_login(
     }
 }
 
-pub async fn fetch_profile(client: &Client, base: &str, session: &str) -> Result<Profile> {
-    let response = client
-        .get(format!("{base}/api/me"))
-        .bearer_auth(session)
-        .send()
-        .await?;
-    if !response.status().is_success() {
-        return Err(fail(response).await);
-    }
-    Ok(response.json().await?)
-}
-
 /// Ник игрок меняет сам — UUID при этом остаётся прежним.
 pub async fn set_nickname(
     client: &Client,

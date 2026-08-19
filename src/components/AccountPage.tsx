@@ -48,6 +48,15 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
     api.glandTextures().then(applyLibrary).catch((err) => setError(errorText(err)));
   }, [signedIn]);
 
+  // Уходим со страницы по Escape: кнопки «Назад» нет, слева всегда есть режимы.
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [onClose]);
+
   // Опрос входа живёт только пока открыт диалог.
   useEffect(() => {
     return () => {
@@ -137,9 +146,6 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
     <section className="account-page">
       <header className="account-head">
         <h2>Аккаунт</h2>
-        <Button variant="secondary" onClick={onClose}>
-          Назад
-        </Button>
       </header>
 
 
