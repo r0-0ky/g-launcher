@@ -269,6 +269,7 @@ export default function App() {
         onAccountClick={() => setScreen("account")}
         onShopClick={() => setScreen("shop")}
         shopActive={screen === "shop"}
+        modeActive={screen === "mode"}
         coins={coins}
         onSettingsClick={() => setShowSettings(true)}
         onRefresh={() => void loadManifest(true)}

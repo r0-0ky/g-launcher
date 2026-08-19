@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import type { Shop } from "../api";
+import type { Shop, ShopItem } from "../api";
 import { api, errorText } from "../api";
 import { Button } from "./McButton";
+import { PurchaseReveal } from "./PurchaseReveal";
+import { Loader } from "./Loader";
 import { SkinPreview } from "./SkinPreview";
 import coin from "../assets/coin.png";
 
@@ -28,6 +30,8 @@ export function ShopPage({ onBought }: Props) {
   /** Открытая карточка: показываем вещь крупно, её можно покрутить. */
   const [picked, setPicked] = useState<number | null>(null);
   const shown = shop?.items.find((item) => item.id === picked) ?? null;
+  /** Только что купленное: показываем крупно, пока игрок не закроет. */
+  const [won, setWon] = useState<{ item: ShopItem; textureId: number | null } | null>(null);
 
   async function reload() {
     try {
@@ -46,7 +50,16 @@ export function ShopPage({ onBought }: Props) {
     setBusy(id);
     setError(null);
     try {
-      await api.glandBuy(id);
+      const item = shop?.items.find((row) => row.id === id) ?? null;
+      const library = await api.glandBuy(id);
+
+      // Вещь в библиотеке узнаём по картинке: адрес у неё тот же, что на витрине.
+      const texture = [...library.skins, ...library.capes].find(
+        (row) => row.url === item?.url
+      );
+      if (item) setWon({ item, textureId: texture?.id ?? null });
+
+      setPicked(null);
       await reload();
       onBought?.();
     } catch (err) {
@@ -67,6 +80,18 @@ export function ShopPage({ onBought }: Props) {
       </header>
 
       {error && <div className="error">{error}</div>}
+
+      {won && (
+        <PurchaseReveal
+          item={won.item}
+          textureId={won.textureId}
+          wearing={shop?.wearing ?? null}
+          onClose={() => {
+            setWon(null);
+            onBought?.();
+          }}
+        />
+      )}
 
       {shown && (
         <div className={`shop-detail rarity-${shown.rarity}`}>
@@ -121,6 +146,8 @@ export function ShopPage({ onBought }: Props) {
 
       {!shown && (
       <div className="account-main">
+        {!shop && !error && <Loader label="Открываем витрину…" />}
+
         {shop && shop.items.length === 0 && (
           <span className="muted">Витрина пока пуста — загляните позже</span>
         )}

@@ -78,6 +78,13 @@ export const Logout = icon([
   "M14 7h2v10h-2zm2 6h2v2h-2zM6 2h12v2H6zm0 18h12v2H6zM4 4h2v16H4zm14 0h2v3h-2zm0 13h2v3h-2z",
 ]);
 
+/** Сундук — вход в магазин. */
+export const Store = icon([
+  "M3 5h18v2H3zm0 12h18v2H3zM3 7h2v10H3zm16 0h2v10h-2z",
+  "M5 9h14v2H5z",
+  "M11 11h2v4h-2z",
+]);
+
 /** Окно с приглашением ввода — консоль игры. */
 export const Terminal = icon([
   "M2 3h20v2H2zm0 16h20v2H2zM2 5h2v14H2zm18 0h2v14h-2z",

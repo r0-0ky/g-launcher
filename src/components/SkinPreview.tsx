@@ -14,6 +14,8 @@ interface Props {
   height?: number;
   /** Модель сама поворачивается — так на витрине видно и спину, и плащ. */
   rotate?: boolean;
+  /** Скорость этого вращения: меняется на лету, без пересоздания сцены. */
+  spinSpeed?: number;
   /** Мышью крутить нельзя: на маленьких плитках это только мешает. */
   locked?: boolean;
   /** Кадр по пояс: на витрине важно лицо и торс, а не ботинки. */
@@ -31,6 +33,7 @@ export function SkinPreview({
   width = 180,
   height = 260,
   rotate = false,
+  spinSpeed = 1.2,
   locked = false,
   bust = false,
   angle = 0,
@@ -50,7 +53,7 @@ export function SkinPreview({
     viewer.controls.enablePan = false;
     viewer.controls.enableRotate = !locked;
     viewer.autoRotate = rotate;
-    viewer.autoRotateSpeed = 1.2;
+    viewer.autoRotateSpeed = spinSpeed;
     viewer.zoom = bust ? 1.45 : 0.85;
     viewer.playerWrapper.rotation.y = angle;
 
@@ -83,6 +86,11 @@ export function SkinPreview({
       viewerRef.current = null;
     };
   }, [width, height, rotate, locked, bust, angle, pose]);
+
+  // Скорость крутим отдельно: пересоздавать сцену ради неё незачем.
+  useEffect(() => {
+    if (viewerRef.current) viewerRef.current.autoRotateSpeed = spinSpeed;
+  }, [spinSpeed]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

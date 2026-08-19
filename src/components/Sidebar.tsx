@@ -2,7 +2,7 @@ import type { Account, Mode } from "../api";
 import { loaderLabel } from "../api";
 import coin from "../assets/coin.png";
 import logo from "../assets/logo-gland.webp";
-import { Reload, Settings, User, VolumeOff, VolumeOn } from "./icons";
+import { Reload, Settings, Store, User, VolumeOff, VolumeOn } from "./icons";
 
 interface Props {
   modes: Mode[];
@@ -16,6 +16,8 @@ interface Props {
   coins: number | null;
   /** Открыт ли сейчас магазин — подсвечиваем пункт. */
   shopActive: boolean;
+  /** Открыт ли экран режима: иначе выбранный режим не подсвечиваем. */
+  modeActive: boolean;
   onRefresh: () => void;
   refreshing: boolean;
   updatable: Record<string, boolean>;
@@ -32,6 +34,7 @@ export function Sidebar({
   onSettingsClick,
   onShopClick,
   shopActive,
+  modeActive,
   coins,
   onRefresh,
   refreshing,
@@ -49,9 +52,14 @@ export function Sidebar({
         className={`shop-link${shopActive ? " active" : ""}`}
         onClick={onShopClick}
       >
-        <img src={coin} alt="" draggable={false} />
+        <Store />
         <span>Магазин</span>
-        {coins !== null && <span className="shop-link-coins">{coins}</span>}
+        {coins !== null && (
+          <span className="shop-link-coins">
+            <img src={coin} alt="" draggable={false} />
+            {coins}
+          </span>
+        )}
       </button>
 
       <div className="sidebar-head">
@@ -71,7 +79,7 @@ export function Sidebar({
         {modes.map((mode) => (
           <button
             key={mode.id}
-            className={`mode-item${mode.id === selectedId ? " active" : ""}`}
+            className={`mode-item${mode.id === selectedId && modeActive ? " active" : ""}`}
             onClick={() => onSelect(mode.id)}
           >
             {mode.icon ? (

@@ -6,6 +6,7 @@ import { api, errorText } from "../api";
 import { Button } from "./McButton";
 import { Close, Logout, NoTexture } from "./icons";
 import { SkinPreview } from "./SkinPreview";
+import { Loader } from "./Loader";
 
 interface Props {
   accounts: Account[];
@@ -192,6 +193,8 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
             )}
           </div>
         )}
+
+        {signedIn && !library && <Loader label="Открываем библиотеку…" />}
 
         {library && (
           <>

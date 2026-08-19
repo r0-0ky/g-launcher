@@ -1632,13 +1632,22 @@ img.avatar {
 /* Витрина живёт по тем же правилам, что и страница аккаунта: своя прокрутка,
    поля от краёв окна — иначе заголовок липнет к панели режимов. */
 .shop-page {
+  position: relative;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  /* Шапка с кошельком стоит на месте, прокручивается только витрина. */
+  overflow: hidden;
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* Витрина тянется до низа окна и прокручивается сама. */
+.shop-page .account-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .shop-grid {
@@ -1760,6 +1769,119 @@ img.avatar {
   width: 100%;
 }
 
+/* --- Ожидание загрузки --- */
+
+.loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 0;
+}
+
+.loader svg {
+  animation: pixel-spin 0.9s steps(8) infinite;
+}
+
+/* --- Показ покупки --- */
+
+.reveal {
+  --rarity: #9a9aa2;
+  --rarity-deep: #4a4a52;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  background: radial-gradient(
+    circle at 50% 44%,
+    var(--rarity) 0%,
+    var(--rarity-deep) 52%,
+    rgba(12, 12, 16, 0.96) 100%
+  );
+  animation: reveal-in 0.25s ease both;
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.reveal-stage {
+  position: relative;
+  line-height: 0;
+}
+
+/* Вещь вылетает из точки и раскрывается: пружина без плавных полутонов. */
+.reveal-model {
+  animation: reveal-pop 0.75s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+
+@keyframes reveal-pop {
+  from {
+    transform: scale(0.12);
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.reveal .skin-preview {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Вспышка: кубики разлетаются от центра модели. */
+.reveal-burst {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  pointer-events: none;
+}
+
+.spark {
+  position: absolute;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px var(--rarity);
+  image-rendering: pixelated;
+  animation: spark-fly 0.65s steps(7) forwards;
+}
+
+@keyframes spark-fly {
+  from {
+    transform: translate(0, 0) scale(1.2);
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), var(--dy)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+.reveal-title {
+  font-size: 24px;
+}
+
+.reveal-actions {
+  display: flex;
+  gap: 10px;
+}
+
 /* --- Вещь крупным планом --- */
 
 .shop-detail {
@@ -1858,25 +1980,29 @@ img.avatar {
 
 /* Качество читается по цвету — как на витринах в играх. */
 .shop-card.rarity-green,
-.shop-detail.rarity-green {
+.shop-detail.rarity-green,
+.reveal.rarity-green {
   --rarity: #63c23a;
   --rarity-deep: #2f6b1c;
 }
 
 .shop-card.rarity-blue,
-.shop-detail.rarity-blue {
+.shop-detail.rarity-blue,
+.reveal.rarity-blue {
   --rarity: #4f9bec;
   --rarity-deep: #1d4c86;
 }
 
 .shop-card.rarity-purple,
-.shop-detail.rarity-purple {
+.shop-detail.rarity-purple,
+.reveal.rarity-purple {
   --rarity: #b061e8;
   --rarity-deep: #5a2585;
 }
 
 .shop-card.rarity-legendary,
-.shop-detail.rarity-legendary {
+.shop-detail.rarity-legendary,
+.reveal.rarity-legendary {
   --rarity: #ffc44d;
   --rarity-deep: #a35f10;
 }
@@ -1918,5 +2044,14 @@ img.avatar {
 /* Кошелёк прижат к правому краю пункта. */
 .shop-link-coins {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
+}
+
+.shop-link-coins img {
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
 }
