@@ -21,7 +21,22 @@ export const config = {
   /** Максимальный размер загружаемого файла. */
   maxUploadBytes: Number(process.env.MAX_UPLOAD_MB ?? 512) * 1024 * 1024,
   sessionTtlMs: Number(process.env.SESSION_TTL_HOURS ?? 24) * 3600 * 1000,
+
+  /** Бот, через которого игроки входят: токен от @BotFather. */
+  telegramBotToken: (process.env.TELEGRAM_BOT_TOKEN ?? "").trim(),
+  /** Имя бота без «@» — из него собирается ссылка входа. */
+  telegramBotName: (process.env.TELEGRAM_BOT_NAME ?? "").trim().replace(/^@/, ""),
+  /**
+   * Секрет вебхука: Telegram присылает его заголовком, чужие запросы отсекаются.
+   * Пусто — сгенерируем свой при старте, но тогда вебхук надо ставить самим.
+   */
+  telegramWebhookSecret: (process.env.TELEGRAM_WEBHOOK_SECRET ?? "").trim(),
+  /** Сколько живёт сессия игрока в лаунчере. */
+  accountSessionTtlMs: Number(process.env.ACCOUNT_SESSION_TTL_DAYS ?? 30) * 86400 * 1000,
 };
+
+/** Вход через Telegram включается, только если бот настроен целиком. */
+export const telegramReady = Boolean(config.telegramBotToken && config.telegramBotName);
 
 export const paths = {
   db: resolve(config.dataDir, "gandoni.db"),

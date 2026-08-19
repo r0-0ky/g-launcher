@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 
 import { ensureDataDirs, paths } from "./config.js";
-import type { ModeFileRow, ModeInput, ModeRow } from "./types.js";
+import type { AccountRow, ModeFileRow, ModeInput, ModeRow } from "./types.js";
 
 // Модуль открывает базу прямо при импорте, поэтому папки создаём здесь же:
 // index.ts выполнится позже, чем эта строка.
@@ -61,6 +61,38 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_mode_files_mode ON mode_files(mode_id);
+
+  -- Аккаунт игрока. Заводится при первом входе через Telegram; id сразу служит
+  -- UUID игрока в Minecraft, поэтому смена ника прогресс не теряет.
+  CREATE TABLE IF NOT EXISTS accounts (
+    id            TEXT PRIMARY KEY,
+    telegram_id   INTEGER NOT NULL UNIQUE,
+    telegram_name TEXT,
+    username      TEXT UNIQUE COLLATE NOCASE,
+    skin_sha1     TEXT,
+    skin_model    TEXT NOT NULL DEFAULT 'classic',
+    banned        INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Попытка входа: лаунчер выдаёт ссылку на бота, бот подтверждает её нажатием.
+  CREATE TABLE IF NOT EXISTS login_attempts (
+    token      TEXT PRIMARY KEY,
+    account_id TEXT REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+  );
+
+  -- Сессия игрока в лаунчере.
+  CREATE TABLE IF NOT EXISTS account_sessions (
+    token      TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sessions_account ON account_sessions(account_id);
 `);
 
 const columns = {
@@ -81,6 +113,58 @@ export const queries = {
   ),
   filesOfMode: db.prepare<[string], ModeFileRow>(
     `SELECT * FROM mode_files WHERE mode_id = ? ORDER BY kind, path`
+  ),
+
+  // --- Аккаунты игроков ---
+  accountByTelegram: db.prepare<[number], AccountRow>(
+    `SELECT * FROM accounts WHERE telegram_id = ?`
+  ),
+  accountById: db.prepare<[string], AccountRow>(`SELECT * FROM accounts WHERE id = ?`),
+  accountByName: db.prepare<[string], AccountRow>(
+    `SELECT * FROM accounts WHERE username = ? COLLATE NOCASE`
+  ),
+  allAccounts: db.prepare<[], AccountRow>(
+    `SELECT * FROM accounts ORDER BY created_at DESC`
+  ),
+  insertAccount: db.prepare(
+    `INSERT INTO accounts (id, telegram_id, telegram_name) VALUES (@id, @telegram_id, @telegram_name)`
+  ),
+  touchTelegramName: db.prepare(
+    `UPDATE accounts SET telegram_name = ?, updated_at = datetime('now') WHERE id = ?`
+  ),
+  setUsername: db.prepare(
+    `UPDATE accounts SET username = ?, updated_at = datetime('now') WHERE id = ?`
+  ),
+  setSkin: db.prepare(
+    `UPDATE accounts SET skin_sha1 = ?, skin_model = ?, updated_at = datetime('now') WHERE id = ?`
+  ),
+  setBanned: db.prepare(
+    `UPDATE accounts SET banned = ?, updated_at = datetime('now') WHERE id = ?`
+  ),
+
+  // --- Вход через бота ---
+  createLogin: db.prepare(
+    `INSERT INTO login_attempts (token, expires_at) VALUES (?, ?)`
+  ),
+  loginByToken: db.prepare<[string], { token: string; account_id: string | null; expires_at: string }>(
+    `SELECT * FROM login_attempts WHERE token = ?`
+  ),
+  confirmLogin: db.prepare(
+    `UPDATE login_attempts SET account_id = ? WHERE token = ?`
+  ),
+  dropLogin: db.prepare(`DELETE FROM login_attempts WHERE token = ?`),
+  dropStaleLogins: db.prepare(`DELETE FROM login_attempts WHERE expires_at < datetime('now')`),
+
+  // --- Сессии игроков ---
+  createSession: db.prepare(
+    `INSERT INTO account_sessions (token, account_id, expires_at) VALUES (?, ?, ?)`
+  ),
+  sessionByToken: db.prepare<[string], { token: string; account_id: string; expires_at: string }>(
+    `SELECT * FROM account_sessions WHERE token = ?`
+  ),
+  dropSession: db.prepare(`DELETE FROM account_sessions WHERE token = ?`),
+  dropStaleSessions: db.prepare(
+    `DELETE FROM account_sessions WHERE expires_at < datetime('now')`
   ),
   fileById: db.prepare<[number], ModeFileRow>(`SELECT * FROM mode_files WHERE id = ?`),
   deleteFile: db.prepare(`DELETE FROM mode_files WHERE id = ?`),

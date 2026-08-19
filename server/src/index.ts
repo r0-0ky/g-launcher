@@ -7,10 +7,12 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 
-import { config } from "./config.js";
+import { config, telegramReady } from "./config.js";
+import { accountRoutes } from "./routes/account.js";
 import { adminRoutes } from "./routes/admin.js";
 import { downloadRoutes } from "./routes/download.js";
 import { publicRoutes } from "./routes/public.js";
+import { setWebhook } from "./telegram.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const adminDist = resolve(here, "admin");
@@ -29,6 +31,7 @@ await app.register(multipart, {
 await app.register(publicRoutes);
 await app.register(downloadRoutes);
 await app.register(adminRoutes, { prefix: "/api" });
+await app.register(accountRoutes, { prefix: "/api" });
 
 // Собранная админка отдаётся тем же процессом — отдельный веб-сервер не нужен.
 if (existsSync(join(adminDist, "index.html"))) {
@@ -58,4 +61,20 @@ try {
 } catch (error) {
   app.log.error(error);
   process.exit(1);
+}
+
+// Вебхук ставим после старта: до этого нам нечем принимать обновления.
+if (telegramReady) {
+  if (!config.telegramWebhookSecret) {
+    app.log.warn("TELEGRAM_WEBHOOK_SECRET пуст — вебхук не ставим, вход через бота работать не будет");
+  } else if (!config.publicUrl) {
+    app.log.warn("PUBLIC_URL пуст — некуда ставить вебхук Telegram");
+  } else {
+    const hook = `${config.publicUrl}/api/telegram/webhook`;
+    setWebhook(hook, config.telegramWebhookSecret)
+      .then(() => app.log.info(`Вебхук Telegram: ${hook}`))
+      .catch((error) => app.log.error({ error }, "не удалось поставить вебхук Telegram"));
+  }
+} else {
+  app.log.info("Вход через Telegram выключен: не заданы TELEGRAM_BOT_TOKEN и TELEGRAM_BOT_NAME");
 }

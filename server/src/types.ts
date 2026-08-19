@@ -70,3 +70,18 @@ export interface ModeInput {
   visible?: boolean;
   sortOrder?: number;
 }
+
+/** Аккаунт игрока: заводится при первом входе через Telegram. */
+export interface AccountRow {
+  /** UUID без дефисов — он же UUID игрока в Minecraft. */
+  id: string;
+  telegram_id: number;
+  telegram_name: string | null;
+  /** Игровой ник. Пусто, пока игрок его не выбрал. */
+  username: string | null;
+  skin_sha1: string | null;
+  skin_model: "classic" | "slim";
+  banned: number;
+  created_at: string;
+  updated_at: string;
+}
