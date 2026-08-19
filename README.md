@@ -1,4 +1,4 @@
-# Gandoni Launcher
+# G Launcher
 
 Лаунчер Minecraft на Tauri 2 (Rust) + React + TypeScript.
 

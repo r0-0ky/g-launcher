@@ -28,9 +28,9 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <img className="brand-logo" src={logo} alt="Gandoni" draggable={false} />
+        <img className="brand-logo" src={logo} alt="G Launcher" draggable={false} />
         <div className="brand-titles">
-          <div className="brand-title">Gandoni</div>
+          <div className="brand-title">G Launcher</div>
           <div className="brand-sub">лаунчер</div>
         </div>
       </div>

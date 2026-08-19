@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Gandoni Launcher",
+  "productName": "G Launcher",
   "version": "../package.json",
   "identifier": "com.gandoni.launcher",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Gandoni Launcher",
+        "title": "G Launcher",
         "width": 1160,
         "height": 720,
         "minWidth": 940,

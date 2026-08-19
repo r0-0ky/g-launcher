@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Первичная настройка VPS под Gandoni Launcher.
+# Первичная настройка VPS под G Launcher.
 # Ставит Docker, создаёт папку деплоя и шаблон .env. Запускать один раз, на сервере:
 #
 #   curl -fsSL https://raw.githubusercontent.com/r0-0ky/g-launcher/main/server/deploy/bootstrap.sh | sudo bash

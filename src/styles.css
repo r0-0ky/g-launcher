@@ -1,21 +1,11 @@
-/* Pixelify Sans — OFL, лежит в assets/fonts вместе с текстом лицензии.
-   Возим с собой: лаунчер не должен ходить в сеть за шрифтом. */
+/* Monocraft — шрифт в духе игрового, SIL Open Font License; текст лицензии
+   лежит рядом в assets/fonts. Возим с собой: лаунчер не должен ходить в сеть. */
 @font-face {
-  font-family: "Pixelify Sans";
+  font-family: "Monocraft";
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400;
   font-display: block;
-  src: url("./assets/fonts/pixelify-latin.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2190-2193, U+2212;
-}
-
-@font-face {
-  font-family: "Pixelify Sans";
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: block;
-  src: url("./assets/fonts/pixelify-cyrillic.woff2") format("woff2");
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  src: url("./assets/fonts/monocraft.woff2") format("woff2");
 }
 
 :root {
@@ -74,7 +64,7 @@ body,
 
 body {
   color: var(--ink);
-  font-family: "Chalkboard SE", "Comic Sans MS", "Comic Neue", "Marker Felt", system-ui, sans-serif;
+  font-family: "Monocraft", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
   font-size: 14px;
   overflow: hidden;
   user-select: none;
@@ -973,23 +963,6 @@ input:focus {
    Фон Jellyfish Fields, пузырьки, маскоты и заставка намеренно оставлены —
    это гибрид, а не смена темы.
    ========================================================================== */
-
-/* Пиксельный шрифт идёт на заголовки и кнопки. В основной текст — намеренно
-   нет: в нём «5» легко спутать с «S», а «ы» и «ш» нарисованы латиницей, и
-   версии сборок вроде 1.20.1 читаются плохо. Числа и мелкий текст остаются
-   прежним шрифтом. */h1,
-h2,
-.brand-title,
-.mode-item-name,
-.account-name,
-.status-summary strong,
-.icon-button,
-.music-toggle,
-.intro-skip {
-  font-family: "Pixelify Sans", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
-  font-weight: 400;
-  letter-spacing: 0.4px;
-}
 
 /* --- Выпуклые поверхности: всё, на что можно нажать --- */.icon-button,
 .music-toggle,

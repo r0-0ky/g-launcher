@@ -1,4 +1,4 @@
-# Gandoni Launcher — бэкенд + админка
+# G Launcher — бэкенд + админка
 
 Один Node-сервис (Fastify + SQLite), который:
 

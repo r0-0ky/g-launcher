@@ -83,7 +83,7 @@ jobs:
           GANDONI_MS_CLIENT_ID: ${{ secrets.GANDONI_MS_CLIENT_ID }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "Gandoni Launcher v__VERSION__"
+          releaseName: "G Launcher v__VERSION__"
           releaseBody: "Скачайте файл для своей системы ниже. Установленный лаунчер обновится сам."
           # Собираем в черновик: пока не готовы все три платформы,
           # обновлялка и сайт загрузок не должны видеть неполный релиз.

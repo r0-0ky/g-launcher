@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { FastifyInstance } from "fastify";
 
 import { config } from "../config.js";
-import { PIXELIFY_CYRILLIC_BASE64, PIXELIFY_LATIN_BASE64 } from "./fonts.js";
+import { MONOCRAFT_BASE64 } from "./fonts.js";
 
 const BACKGROUND = "download-background.mp4";
 /** Первый кадр фона: показывается мгновенно, пока видео ещё качается. */
@@ -153,8 +153,7 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
 
   // Шрифт страницы. Содержимое неизменно, поэтому кэш вечный.
   const fonts: Record<string, string> = {
-    "pixelify-latin.woff2": PIXELIFY_LATIN_BASE64,
-    "pixelify-cyrillic.woff2": PIXELIFY_CYRILLIC_BASE64,
+    "monocraft.woff2": MONOCRAFT_BASE64,
   };
 
   // Стили кнопок из minecraft-react-ui: страница не React-приложение,
@@ -174,8 +173,8 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .send(createReadStream(file));
   });
 
-  app.get("/download/bubble.png", async (request, reply) => {
-    const file = assetPath("bubble.png");
+  app.get<{ Params: { name: string } }>("/download/:name(logo|bubble).png", async (request, reply) => {
+    const file = assetPath(request.params.name + ".png");
     if (!file) return reply.code(404).send({ error: "не найдено" });
 
     const info = statSync(file);
@@ -260,21 +259,15 @@ const page = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Gandoni Launcher — скачать</title>
+<title>G Launcher — скачать</title>
 <meta name="description" content="Лаунчер Minecraft со сборками: моды, шейдеры и обновления ставятся сами." />
 <link rel="stylesheet" href="/download/minecraft-react-ui.css" />
 <style>
   /* Титульный экран в духе игрового меню. Шрифт и палитра — те же, что в
      самом лаунчере (src/styles.css). */
   @font-face {
-    font-family: "Pixelify Sans"; font-style: normal; font-weight: 400 700; font-display: block;
-    src: url("/download/fonts/pixelify-latin.woff2") format("woff2");
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2190-2193, U+2212;
-  }
-  @font-face {
-    font-family: "Pixelify Sans"; font-style: normal; font-weight: 400 700; font-display: block;
-    src: url("/download/fonts/pixelify-cyrillic.woff2") format("woff2");
-    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+    font-family: "Monocraft"; font-style: normal; font-weight: 400; font-display: block;
+    src: url("/download/fonts/monocraft.woff2") format("woff2");
   }
   :root {
     --water-top: #4ad6ec; --water-mid: #18a8d4; --water-deep: #0d80b6;
@@ -294,16 +287,10 @@ const page = `<!doctype html>
   html, body { margin: 0; }
   body {
     min-height: 100vh; color: #ffffff;
-    font-family: "Chalkboard SE", "Comic Sans MS", "Comic Neue", "Marker Felt", system-ui, sans-serif;
+    font-family: "Monocraft", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
     /* Пока видео не залито — вода Jellyfish Fields, как раньше. */
     background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 48%, var(--water-deep) 100%);
     background-attachment: fixed;
-  }
-  /* Пиксельный шрифт — на заголовки и кнопки: в нём «5» похожа на «S», а «ы»
-     и «ш» нарисованы латиницей, поэтому версии и размеры остаются обычным. */
-  h1, h2, h3, .Button, .logo, .splash, .num, .soon {
-    font-family: "Pixelify Sans", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
-    font-weight: 400; letter-spacing: 0.4px;
   }
 
   /* --- Фон --- */
@@ -350,30 +337,30 @@ const page = `<!doctype html>
 
   /* --- Экраны меню --- */
   .title {
-    position: relative; z-index: 3; min-height: 100vh;
+    /* svh — высота без адресной строки: на мобильных 100vh уезжает под неё. */
+    position: relative; z-index: 3; min-height: 100vh; min-height: 100svh;
     display: flex; align-items: center; justify-content: center; padding: 56px 16px 72px;
+    /* Контейнер занимает весь экран и перехватывал бы клики по пузырькам —
+       нажатия ловят только сами экраны меню. */
+    pointer-events: none;
   }
+  .screen { pointer-events: auto; }
   .screen { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; }
   #screen-menu .menu { width: min(420px, 100%); }
   .screen-title { margin: 0 0 4px; font-size: 26px; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65); }
 
-  /* Отступ справа — место для жёлтой подписи, чтобы она не легла на подзаголовок. */
-  .logo-wrap { position: relative; text-align: center; margin-bottom: 18px; padding-right: 120px; }
+  /* Логотип по центру, подпись цепляется к его правому нижнему углу. */
+  .logo-wrap { position: relative; display: inline-block; margin-bottom: 20px; }
   .logo {
-    margin: 0; font-size: clamp(40px, 10vw, 78px); line-height: 0.95;
-    /* Каменные буквы: заливка + толстая обводка под ней + жёсткий вынос вниз-вправо. */
-    color: #c9c9cd;
-    -webkit-text-stroke: 5px #1c1c20;
-    paint-order: stroke fill;
-    text-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55);
-  }
-  .logo .sub {
-    display: block; font-size: 0.42em; color: #e8e8ec; letter-spacing: 2px;
-    -webkit-text-stroke: 4px #1c1c20;
+    display: block;
+    width: min(460px, 84vw);
+    height: auto;
+    image-rendering: pixelated;
+    filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, 0.45));
   }
   /* Жёлтая подпись под углом — как в титульном экране игры. */
   .splash {
-    position: absolute; right: -6px; bottom: 26px; max-width: 150px; text-align: center; line-height: 1.15;
+    position: absolute; right: -26px; bottom: -2px; max-width: 160px; text-align: center; line-height: 1.15;
     transform: rotate(-16deg);
     color: var(--splash); font-size: 17px; cursor: pointer; user-select: none;
     text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55); animation: splash-beat 0.75s ease-in-out infinite alternate;
@@ -476,9 +463,28 @@ const page = `<!doctype html>
   .corner.right { right: 10px; }
 
   @media (max-width: 560px) {
-    .logo-wrap { padding-right: 0; }
-    .splash { right: -4px; bottom: -34px; font-size: 13px; max-width: 130px; }
-    .title { padding: 40px 12px 64px; }
+    .title { padding: 28px 10px 52px; }
+    .logo { width: 78vw; }
+    .splash { right: -4px; bottom: -18px; font-size: 12px; max-width: 108px; }
+    .logo-wrap { margin-bottom: 26px; }
+    .screen { gap: 10px; }
+    .screen-title { font-size: 20px; }
+    .Button { padding: 12px 12px; font-size: 15px; }
+    .Button.square { width: 42px; flex: 0 0 42px; }
+    .panel { padding: 12px; }
+    /* Три вкладки должны уместиться в ряд даже на узком экране. */
+    .os-tabs { gap: 6px; }
+    .os-tab { min-width: 0; flex: 1; padding: 8px 4px; }
+    .os-name { font-size: 12px; }
+    .os-count { font-size: 10px; }
+    .os-ico { width: 24px; height: 24px; }
+    .others a { font-size: 12px; padding: 8px 10px; gap: 8px; }
+    /* Имя файла длинное — переносим по буквам, иначе ломает раскладку. */
+    .others a span:first-child { overflow-wrap: anywhere; }
+    .picked { font-size: 12px; overflow-wrap: anywhere; }
+    .note { font-size: 12px; }
+    .feats { grid-template-columns: 1fr; }
+    .corner { font-size: 11px; bottom: 6px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .bubble { display: none; }
@@ -494,7 +500,7 @@ const page = `<!doctype html>
 <main class="title">
   <section class="screen" id="screen-menu">
     <div class="logo-wrap">
-      <h1 class="logo">Gandoni<span class="sub">Launcher</span></h1>
+      <img class="logo" src="/download/logo.png" alt="G LAND" />
       <div class="splash" id="splash" title="Нажми, чтобы сменить"></div>
     </div>
     <div class="menu">
@@ -504,7 +510,6 @@ const page = `<!doctype html>
       <div class="row2">
         <button class="Button Button_secondary square" id="bubbles-toggle" title="Пузырьки">🫧</button>
         <a class="Button Button_secondary" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
-        <a class="Button Button_secondary" id="repo-link" href="https://github.com" target="_blank" rel="noreferrer">Исходники</a>
         <button class="Button Button_secondary square" id="splash-roll" title="Сменить подпись">✨</button>
       </div>
     </div>
@@ -584,8 +589,7 @@ const page = `<!doctype html>
   </section>
 </main>
 
-<div class="corner left" id="corner-version">Gandoni Launcher</div>
-<div class="corner right">Не связано с Mojang · пузырьки лопаются 🫧</div>
+<div class="corner left" id="corner-version">G Launcher</div>
 
 <script>
   var NAMES = { macos: "macOS", windows: "Windows", linux: "Linux" };
@@ -691,6 +695,12 @@ const page = `<!doctype html>
       video.removeAttribute("src");
       video.load();
     });
+
+    // На узком экране и при экономии трафика фон остаётся картинкой: тянуть
+    // ради него полтора десятка мегабайт по мобильной сети незачем.
+    var save = navigator.connection && navigator.connection.saveData;
+    if (window.matchMedia("(max-width: 640px)").matches || save) return;
+
     video.src = "/download/background.mp4";
   })();
 
@@ -739,13 +749,12 @@ const page = `<!doctype html>
       if (release.repo) {
         document.getElementById("all-releases").href =
           "https://github.com/" + release.repo + "/releases";
-        document.getElementById("repo-link").href = "https://github.com/" + release.repo;
       }
 
       // Релизов ещё не выпускали — это нормальное состояние, а не ошибка.
       var total = ORDER.reduce(function (n, os) { return n + release.assets[os].length; }, 0);
       if (!release.version || !total) {
-        corner.textContent = "Gandoni Launcher · релиз готовится";
+        corner.textContent = "G Launcher · релиз готовится";
         var soon = document.createElement("p");
         soon.className = "soon";
         soon.textContent = "Сборки появятся здесь сразу после выпуска — страница подтянет их сама.";
@@ -753,7 +762,7 @@ const page = `<!doctype html>
         return;
       }
 
-      corner.textContent = "Gandoni Launcher " + release.version;
+      corner.textContent = "G Launcher " + release.version;
       if (release.publishedAt) {
         corner.textContent += " · " + new Date(release.publishedAt).toLocaleDateString("ru-RU", {
           day: "numeric", month: "long", year: "numeric"
