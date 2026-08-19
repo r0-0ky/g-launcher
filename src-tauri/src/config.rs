@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 use crate::util::{read_json, write_json};
 
-pub const DEFAULT_MANIFEST_URL: &str =
-    "https://raw.githubusercontent.com/gandoni/launcher-manifest/main/manifest.json";
+pub const DEFAULT_MANIFEST_URL: &str = "https://onlyg.land/manifest.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
