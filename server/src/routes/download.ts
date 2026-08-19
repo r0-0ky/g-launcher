@@ -380,14 +380,14 @@ const page = `<!doctype html>
   .logo-wrap { position: relative; display: inline-block; margin-bottom: 20px; }
   .logo {
     display: block;
-    width: min(460px, 84vw);
+    width: min(620px, 92vw);
     height: auto;
     image-rendering: pixelated;
     filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, 0.45));
   }
   /* Жёлтая подпись под углом — как в титульном экране игры. */
   .splash {
-    position: absolute; right: -26px; bottom: -2px; max-width: 160px; text-align: center; line-height: 1.15;
+    position: absolute; right: -18px; top: 4px; max-width: 150px; text-align: center; line-height: 1.15;
     transform: rotate(-16deg);
     color: var(--splash); font-size: 17px; cursor: pointer; user-select: none;
     text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55); animation: splash-beat 0.75s ease-in-out infinite alternate;
@@ -501,8 +501,8 @@ const page = `<!doctype html>
 
   @media (max-width: 560px) {
     .title { padding: 28px 10px 52px; }
-    .logo { width: 78vw; }
-    .splash { right: -4px; bottom: -18px; font-size: 12px; max-width: 108px; }
+    .logo { width: 94vw; }
+    .splash { right: 0; top: -6px; font-size: 12px; max-width: 108px; }
     .logo-wrap { margin-bottom: 26px; }
     .screen { gap: 10px; }
     .screen-title { font-size: 20px; }
