@@ -1666,6 +1666,8 @@ img.avatar {
   position: relative;
   width: 240px;
   overflow: hidden;
+  /* Карточка целиком кликабельна — открывает вещь крупным планом. */
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   /* Свет качества заливает всю карточку: и модель, и подпись с ценой стоят
@@ -1696,7 +1698,7 @@ img.avatar {
 .shop-card .skin-preview {
   background: transparent;
   box-shadow: none;
-  cursor: default;
+  cursor: pointer;
   -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 96%);
   mask-image: linear-gradient(180deg, #000 58%, transparent 96%);
 }
