@@ -44,6 +44,8 @@
   --drop: 3px 3px 0 rgba(0, 0, 0, 0.35);
   /* Нижняя грань вдавленных поверхностей: белая била бы по глазам на тёмном. */
   --sunk-hi: #8f8f96;
+  /* Высота ряда в подвале панели: кнопки со значками ровно квадратные. */
+  --row: 42px;
   /* Зелёный кнопки действия — глубокий, как в игровом меню. */
   --go: #4b9c2e;
   --go-deep: #3c8527;
@@ -356,14 +358,15 @@ input:focus {
 
 .sidebar-footer {
   display: flex;
-  /* Кнопки в ряду тянутся до одной высоты — её задаёт карточка аккаунта. */
-  align-items: stretch;
+  /* Высота ряда общая: кнопки со значками от неё квадратные. */
+  align-items: center;
   gap: 8px;
   border-top: 3px dashed rgba(255, 255, 255, 0.5);
   padding-top: 12px;
 }
 
 .account-button {
+  height: var(--row);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -417,8 +420,8 @@ input:focus {
   border: 3px solid var(--ink);
   color: #fff;
   border-radius: 12px;
-  width: 38px;
-  min-height: 38px;
+  width: var(--row);
+  height: var(--row);
   display: grid;
   place-items: center;
   font-size: 18px;
