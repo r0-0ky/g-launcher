@@ -16,6 +16,8 @@ interface Props {
   rotate?: boolean;
   /** Мышью крутить нельзя: на маленьких плитках это только мешает. */
   locked?: boolean;
+  /** Кадр по пояс: на витрине важно лицо и торс, а не ботинки. */
+  bust?: boolean;
 }
 
 export function SkinPreview({
@@ -26,6 +28,7 @@ export function SkinPreview({
   height = 260,
   rotate = false,
   locked = false,
+  bust = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<SkinViewer | null>(null);
@@ -42,14 +45,19 @@ export function SkinPreview({
     viewer.controls.enableRotate = !locked;
     viewer.autoRotate = rotate;
     viewer.autoRotateSpeed = 1.2;
-    viewer.zoom = 0.85;
+    viewer.zoom = bust ? 1.45 : 0.85;
+    if (bust) {
+      // Камера смотрит выше пояса — ноги уходят за нижний край кадра.
+      viewer.controls.target.set(0, 5, 0);
+      viewer.controls.update();
+    }
     viewerRef.current = viewer;
 
     return () => {
       viewer.dispose();
       viewerRef.current = null;
     };
-  }, [width, height, rotate, locked]);
+  }, [width, height, rotate, locked, bust]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

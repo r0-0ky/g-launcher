@@ -85,17 +85,29 @@ export function ShopPage({ onBought }: Props) {
                     cape={item.kind === "cape" ? item.url : null}
                     model={item.kind === "cape" ? (shop.wearing?.model ?? "classic") : item.model}
                     width={180}
-                    height={240}
+                    height={210}
                     rotate
                     locked
+                    bust
                   />
                 </div>
 
                 <div className="shop-card-foot">
                   <div className="shop-card-name">{item.name}</div>
                   {item.owned ? (
-                    <span className="muted small">Куплено</span>
+                    <span className="shop-card-owned">Куплено</span>
                   ) : (
+                    <span className="shop-card-price">
+                      <img className="coin" src={coin} alt="" />
+                      {item.price}
+                    </span>
+                  )}
+                </div>
+
+                {/* Кнопка выезжает снизу под курсором: в покое карточку не
+                    загромождает, а купить можно не уходя с витрины. */}
+                {!item.owned && (
+                  <div className="shop-card-buy">
                     <Button
                       variant="primary"
                       onClick={() => buy(item.id)}
@@ -106,11 +118,10 @@ export function ShopPage({ onBought }: Props) {
                           : undefined
                       }
                     >
-                      <img className="coin" src={coin} alt="" />
-                      {item.price}
+                      {busy === item.id ? "Покупаем…" : "Купить"}
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

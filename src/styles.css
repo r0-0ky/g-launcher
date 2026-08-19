@@ -1646,7 +1646,9 @@ img.avatar {
   /* Цвет качества задаётся классом ниже и красит и рамку, и свет за моделью. */
   --rarity: #9a9aa2;
   --rarity-deep: #4a4a52;
+  position: relative;
   width: 180px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   /* Свет качества заливает всю карточку: и модель, и подпись с ценой стоят
@@ -1669,11 +1671,14 @@ img.avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 240px;
+  height: 210px;
 }
 
+/* Внутри карточки холст без ниши: рамка тут одна — по краю карточки. */
 .shop-card .skin-preview {
   background: transparent;
+  box-shadow: none;
+  cursor: default;
 }
 
 .shop-card-foot {
@@ -1682,6 +1687,13 @@ img.avatar {
   align-items: center;
   gap: 8px;
   padding: 0 10px 12px;
+  transition: opacity 0.16s ease;
+}
+
+/* Под курсором подпись уступает место кнопке. */
+.shop-card:hover .shop-card-foot,
+.shop-card:focus-within .shop-card-foot {
+  opacity: 0;
 }
 
 .shop-card-name {
@@ -1689,6 +1701,40 @@ img.avatar {
   text-align: center;
   overflow-wrap: anywhere;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.shop-card-price,
+.shop-card-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.shop-card-owned {
+  color: var(--sunny);
+}
+
+/* Кнопка ждёт за нижним краем и выезжает, когда курсор на карточке. */
+.shop-card-buy {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.75) 45%);
+  transform: translateY(100%);
+  transition: transform 0.16s ease;
+}
+
+.shop-card:hover .shop-card-buy,
+.shop-card:focus-within .shop-card-buy {
+  transform: translateY(0);
+}
+
+.shop-card-buy .Button {
+  width: 100%;
 }
 
 /* На тёмном фоне карточки серая приписка не читается. */
