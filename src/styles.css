@@ -1500,10 +1500,11 @@ input:focus {
 
 .account-columns {
   display: grid;
-  /* Слева всё управление, справа — модель; она шире не становится. */
+  /* Слева всё управление, справа — модель; она шире не становится.
+     Обе колонки одной высоты — её задаёт та, что длиннее. */
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .account-main,
@@ -1529,10 +1530,8 @@ input:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  /* Модель остаётся на виду, пока листаешь список слева. */
-  position: sticky;
-  top: 0;
 }
 
 /* Узкое окно: модель уезжает наверх, колонки складываются. */
@@ -1543,6 +1542,5 @@ input:focus {
 
   .account-side {
     order: -1;
-    position: static;
   }
 }

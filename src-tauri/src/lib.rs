@@ -449,6 +449,12 @@ async fn gland_upload_texture(
 }
 
 #[tauri::command]
+async fn gland_set_model(state: State<'_, AppState>, model: String) -> Result<gland::Library> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::set_model(&state.client, &base, &session, &model).await
+}
+
+#[tauri::command]
 async fn gland_select_texture(state: State<'_, AppState>, id: i64) -> Result<gland::Library> {
     let (base, session, _) = gland_session(&state).await?;
     gland::select_texture(&state.client, &base, &session, id).await
@@ -633,6 +639,7 @@ pub fn run() {
             gland_set_nickname,
             gland_textures,
             gland_upload_texture,
+            gland_set_model,
             gland_select_texture,
             gland_clear_texture,
             gland_delete_texture,

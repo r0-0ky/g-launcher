@@ -300,6 +300,24 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
     return libraryOf(fresh, originOf(request));
   });
 
+  /**
+   * Тонкие руки или обычные. Меняет модель у надетого скина, а если ничего не
+   * надето — запоминает выбор для следующей загрузки.
+   */
+  app.post<{ Querystring: { model?: string } }>("/me/textures/model", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const model = request.query.model === "slim" ? "slim" : "classic";
+    if (account.skin_sha1) {
+      queries.setTextureModel.run(model, account.id, account.skin_sha1);
+    }
+    queries.setSkin.run(account.skin_sha1, model, account.id);
+
+    const fresh = queries.accountById.get(account.id) as AccountRow;
+    return libraryOf(fresh, originOf(request));
+  });
+
   /** Снять текущую, ничего не удаляя из библиотеки. */
   app.post<{ Querystring: { kind?: string } }>("/me/textures/clear", async (request, reply) => {
     const account = await requireAccount(request, reply);

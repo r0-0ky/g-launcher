@@ -117,7 +117,13 @@ export interface Texture {
 }
 
 export interface Library {
-  profile: { id: string; username: string | null; hasSkin: boolean; hasCape: boolean };
+  profile: {
+    id: string;
+    username: string | null;
+    skinModel: "classic" | "slim";
+    hasSkin: boolean;
+    hasCape: boolean;
+  };
   skins: Texture[];
   capes: Texture[];
 }
@@ -149,6 +155,7 @@ export const api = {
   glandTextures: () => invoke<Library>("gland_textures"),
   glandUploadTexture: (path: string, kind: "skin" | "cape", model: "classic" | "slim") =>
     invoke<Library>("gland_upload_texture", { path, kind, model }),
+  glandSetModel: (model: "classic" | "slim") => invoke<Library>("gland_set_model", { model }),
   glandSelectTexture: (id: number) => invoke<Library>("gland_select_texture", { id }),
   glandClearTexture: (kind: "skin" | "cape") =>
     invoke<Library>("gland_clear_texture", { kind }),

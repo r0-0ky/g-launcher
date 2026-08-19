@@ -195,6 +195,9 @@ export const queries = {
     `INSERT INTO textures (account_id, kind, sha1, model) VALUES (@account_id, @kind, @sha1, @model)
      ON CONFLICT (account_id, kind, sha1) DO UPDATE SET model = @model`
   ),
+  setTextureModel: db.prepare(
+    `UPDATE textures SET model = ? WHERE account_id = ? AND kind = 'skin' AND sha1 = ?`
+  ),
   dropTexture: db.prepare(`DELETE FROM textures WHERE id = ?`),
   countTextureUsers: db.prepare<[string], { count: number }>(
     `SELECT COUNT(*) AS count FROM textures WHERE sha1 = ?`

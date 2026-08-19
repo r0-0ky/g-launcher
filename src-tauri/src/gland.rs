@@ -250,6 +250,19 @@ pub async fn upload_texture(
     .await
 }
 
+/// Тонкие руки или обычные у надетого скина.
+pub async fn set_model(client: &Client, base: &str, session: &str, model: &str) -> Result<Library> {
+    library(
+        client
+            .post(format!("{base}/api/me/textures/model"))
+            .query(&[("model", model)])
+            .bearer_auth(session)
+            .send()
+            .await?,
+    )
+    .await
+}
+
 pub async fn select_texture(client: &Client, base: &str, session: &str, id: i64) -> Result<Library> {
     library(
         client

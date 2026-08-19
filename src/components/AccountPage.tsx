@@ -41,7 +41,10 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
     }
     api
       .glandTextures()
-      .then(setLibrary)
+      .then((next) => {
+        setLibrary(next);
+        setModel(next.profile.skinModel);
+      })
       .catch((err) => setError(errorText(err)));
   }, [signedIn]);
 
@@ -215,7 +218,13 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                   <input
                     type="checkbox"
                     checked={model === "slim"}
-                    onChange={(event) => setModel(event.target.checked ? "slim" : "classic")}
+                    onChange={(event) => {
+                      // Переключатель меняет руки у надетого скина сразу, а не
+                      // только у того, который зальют следующим.
+                      const next = event.target.checked ? "slim" : "classic";
+                      setModel(next);
+                      void textureAction(api.glandSetModel(next));
+                    }}
                   />
                   <span className="switch-track">
                     <span className="switch-knob" />
