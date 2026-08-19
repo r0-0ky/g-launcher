@@ -18,6 +18,10 @@ interface Props {
   locked?: boolean;
   /** Кадр по пояс: на витрине важно лицо и торс, а не ботинки. */
   bust?: boolean;
+  /** Разворот модели в радианах: плащ видно только со спины. */
+  angle?: number;
+  /** Витринная поза вместо покачивания: модель стоит неподвижно. */
+  pose?: boolean;
 }
 
 export function SkinPreview({
@@ -29,6 +33,8 @@ export function SkinPreview({
   rotate = false,
   locked = false,
   bust = false,
+  angle = 0,
+  pose = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<SkinViewer | null>(null);
@@ -39,13 +45,24 @@ export function SkinPreview({
     if (!canvasRef.current) return;
 
     const viewer = new SkinViewer({ canvas: canvasRef.current, width, height });
-    viewer.animation = new IdleAnimation();
+    viewer.animation = pose ? null : new IdleAnimation();
     viewer.controls.enableZoom = false;
     viewer.controls.enablePan = false;
     viewer.controls.enableRotate = !locked;
     viewer.autoRotate = rotate;
     viewer.autoRotateSpeed = 1.2;
     viewer.zoom = bust ? 1.45 : 0.85;
+    viewer.playerWrapper.rotation.y = angle;
+
+    if (pose) {
+      // Руки чуть отведены, ноги в лёгком шаге — иначе модель стоит по стойке
+      // смирно и выглядит как манекен.
+      const body = viewer.playerObject.skin;
+      body.leftArm.rotation.set(-0.12, 0, 0.14);
+      body.rightArm.rotation.set(0.12, 0, -0.14);
+      body.leftLeg.rotation.x = 0.16;
+      body.rightLeg.rotation.x = -0.16;
+    }
     if (bust) {
       // Камера смотрит выше пояса — ноги уходят за нижний край кадра.
       viewer.controls.target.set(0, 5, 0);
@@ -57,7 +74,7 @@ export function SkinPreview({
       viewer.dispose();
       viewerRef.current = null;
     };
-  }, [width, height, rotate, locked, bust]);
+  }, [width, height, rotate, locked, bust, angle, pose]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

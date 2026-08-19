@@ -1636,7 +1636,7 @@ img.avatar {
 .shop-grid {
   display: grid;
   /* Ширина карточки фиксированная: под неё же подогнан холст с моделью. */
-  grid-template-columns: repeat(auto-fill, 180px);
+  grid-template-columns: repeat(auto-fill, 220px);
   justify-content: start;
   gap: 14px;
   margin: 10px 0 8px;
@@ -1647,7 +1647,7 @@ img.avatar {
   --rarity: #9a9aa2;
   --rarity-deep: #4a4a52;
   position: relative;
-  width: 180px;
+  width: 220px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1671,14 +1671,17 @@ img.avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 210px;
+  height: 250px;
 }
 
-/* Внутри карточки холст без ниши: рамка тут одна — по краю карточки. */
+/* Внутри карточки холст без ниши: рамка тут одна — по краю карточки. Низ
+   модели растворяется в свете качества, иначе она обрывалась бы по линейке. */
 .shop-card .skin-preview {
   background: transparent;
   box-shadow: none;
   cursor: default;
+  -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 96%);
+  mask-image: linear-gradient(180deg, #000 58%, transparent 96%);
 }
 
 .shop-card-foot {
@@ -1686,6 +1689,8 @@ img.avatar {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  /* Подпись заходит на растворяющийся низ модели — между ними нет ступеньки. */
+  margin-top: -16px;
   padding: 0 10px 12px;
   transition: opacity 0.16s ease;
 }

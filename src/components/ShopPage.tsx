@@ -84,11 +84,12 @@ export function ShopPage({ onBought }: Props) {
                     skin={item.kind === "cape" ? (shop.wearing?.skin ?? null) : item.url}
                     cape={item.kind === "cape" ? item.url : null}
                     model={item.kind === "cape" ? (shop.wearing?.model ?? "classic") : item.model}
-                    width={180}
-                    height={210}
-                    rotate
+                    width={220}
+                    height={250}
                     locked
                     bust
+                    pose
+                    angle={item.kind === "cape" ? 2.4 : -0.5}
                   />
                 </div>
 
