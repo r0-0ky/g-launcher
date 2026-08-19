@@ -370,7 +370,8 @@ const page = `<!doctype html>
   @keyframes splash-beat { from { transform: rotate(-16deg) scale(1); } to { transform: rotate(-16deg) scale(1.09); } }
 
   .menu { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-  .row2 { display: flex; gap: 8px; }
+  /* Квадратные кнопки по краям выходят за колонку, как в игровом меню. */
+  .row2 { display: flex; gap: 8px; margin: 0 -50px; }
   .row2 .Button { flex: 1; }
 
   /* --- Кнопка меню --- */
@@ -441,7 +442,17 @@ const page = `<!doctype html>
 
   /* --- Что внутри / Как начать --- */
   .feats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .feat .ico { font-size: 24px; line-height: 1; }
+  /* Иконки — pixelarticons (MIT, Gerrit Halfmann): 24×24 по пиксельной сетке. */
+  .ico { width: 26px; height: 26px; fill: currentColor; display: block; }
+  .ico.small { width: 20px; height: 20px; margin: 0 auto; }
+  .ico-wrap { margin-bottom: 6px; }
+  /* Пузырёк на кнопке — первый кадр нашей же ленты. */
+  .bubble-ico {
+    display: block; width: 20px; height: 20px; margin: 0 auto;
+    background: url("/download/bubble.png") 0 0 / 700% 100% no-repeat;
+    image-rendering: pixelated;
+  }
+  .Button.square.off .bubble-ico { opacity: 0.35; }
   .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
   .steps li { display: flex; gap: 14px; align-items: flex-start; }
   .steps b { display: block; font-size: 15px; }
@@ -472,7 +483,9 @@ const page = `<!doctype html>
     .screen { gap: 10px; }
     .screen-title { font-size: 20px; }
     .Button { padding: 12px 12px; font-size: 15px; }
-    .Button.square { width: 42px; flex: 0 0 42px; }
+    .Button.square { width: 40px; flex: 0 0 40px; }
+    /* На узком экране выступать некуда — прижимаем к колонке. */
+    .row2 { margin: 0; }
     .panel { padding: 12px; }
     /* Три вкладки должны уместиться в ряд даже на узком экране. */
     .os-tabs { gap: 6px; }
@@ -510,9 +523,9 @@ const page = `<!doctype html>
       <button class="Button Button_secondary" data-go="about">Что внутри</button>
       <button class="Button Button_secondary" data-go="start">Как начать</button>
       <div class="row2">
-        <button class="Button Button_secondary square" id="bubbles-toggle" title="Пузырьки">🫧</button>
+        <button class="Button Button_secondary square" id="bubbles-toggle" title="Пузырьки" aria-label="Пузырьки"><i class="bubble-ico"></i></button>
         <a class="Button Button_secondary" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
-        <button class="Button Button_secondary square" id="splash-roll" title="Сменить подпись">✨</button>
+        <button class="Button Button_secondary square" id="splash-roll" title="Сменить подпись" aria-label="Сменить подпись"><svg class="ico small" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M11 1h2v4h-2zm0 22h2v-4h-2zM9 5h2v4H9zm0 14h2v-4H9zm4-14h2v4h-2zm0 14h2v-4h-2zM5 9h4v2H5zm14 0h-4v2h4zM1 11h4v2H1zm22 0h-4v2h4zM5 13h4v2H5zm14 0h-4v2h4zm0-12h2v6h-2z"/><path d="M17 3h6v2h-6zM3 17h2v2H3zm-2 2h2v2H1zm2 2h2v2H3zm2-2h2v2H5z"/></svg></button>
       </div>
     </div>
   </section>
@@ -535,32 +548,32 @@ const page = `<!doctype html>
     <div class="panel">
       <div class="feats">
         <div>
-          <div class="ico">🎮</div>
+          <div class="ico-wrap"><svg class="ico" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M4 4h16v2H4zm0 14h16v2H4zM2 6h2v12H2zm18 0h2v12h-2zM8 9h2v6H8z"/><path d="M6 11h6v2H6zm8-2h2v2h-2zm2 4h2v2h-2z"/></svg></div>
           <h3>Режимы</h3>
           <p>Список сборок приезжает с сервера. Выбрал режим — лаунчер собрал его целиком и запустил игру.</p>
         </div>
         <div>
-          <div class="ico">🧩</div>
+          <div class="ico-wrap"><svg class="ico" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M14 4h4v2h-4zm-4-2h4v2h-4zM6 8h4v2H6zm0 10h4v2H6zm4-8h4v2h-4zm0 10h4v2h-4zm4-12h4v2h-4zm0 10h4v2h-4zM6 4h4v2H6zM2 6h4v2H2zm0 10h4v2H2zM18 6h4v2h-4zm0 10h4v2h-4z"/><path d="M2 6h2v12H2zm18 0h2v12h-2zm-8 6h2v8h-2z"/></svg></div>
           <h3>Все лоадеры</h3>
           <p>Ванилла, Fabric, Quilt, Forge, NeoForge. Forge ставится по-настоящему — с процессорами установщика.</p>
         </div>
         <div>
-          <div class="ico">☕</div>
+          <div class="ico-wrap"><svg class="ico" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M4 4h16v2H4zm0 2h2v8H4zm2 8h10v2H6zm14-8h2v4h-2zm-2 4h2v2h-2zm-2-4h2v8h-2zM2 18h18v2H2z"/></svg></div>
           <h3>Java не нужна</h3>
           <p>Нужную версию лаунчер скачает с серверов Mojang сам. Свой путь тоже можно указать.</p>
         </div>
         <div>
-          <div class="ico">🔄</div>
+          <div class="ico-wrap"><svg class="ico" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M16 4h2v6h-2zm-2-2h2v2h-2zm0 2h2v8h-2zM4 8H2v5h2z"/><path d="M4 6h16v2H4zm4 14H6v-6h2zm2 2H8v-2h2zm0-2H8v-8h2zm10-4h2v-5h-2z"/><path d="M20 18H4v-2h16z"/></svg></div>
           <h3>Тихие обновления</h3>
           <p>Качается только новое, убранное из сборки стирается, а твои личные файлы не трогаются.</p>
         </div>
         <div>
-          <div class="ico">🔐</div>
+          <div class="ico-wrap"><svg class="ico" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M5 8h14v2H5zm0 12h14v2H5zM3 10h2v10H3zm16 0h2v10h-2zM7 4h2v4H7zm2-2h6v2H9zm6 2h2v4h-2z"/></svg></div>
           <h3>Вход как удобно</h3>
           <p>По лицензии Microsoft или оффлайн по нику — для локальной игры с друзьями.</p>
         </div>
         <div>
-          <div class="ico">🚀</div>
+          <div class="ico-wrap"><svg class="ico" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M3 19h18v2H3zM5 5h2v14H5zm2-2h10v2H7zm10 2h2v14h-2zm-8 6h2v2H9z"/></svg></div>
           <h3>Кнопка в меню игры</h3>
           <p>Для Fabric- и Quilt-сборок с сервером в главном меню Minecraft появляется кнопка мгновенного захода.</p>
         </div>
@@ -686,7 +699,7 @@ const page = `<!doctype html>
   document.getElementById("bubbles-toggle").addEventListener("click", function () {
     var layer = document.getElementById("bubbles");
     layer.hidden = !layer.hidden;
-    this.textContent = layer.hidden ? "💤" : "🫧";
+    this.classList.toggle("off", layer.hidden);
   });
 
   /* --- Фон-видео. Нет файла — остаётся вода. --- */
