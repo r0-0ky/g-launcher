@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { config } from "./config.js";
 import { queries } from "./db.js";
 import { skinUrl } from "./skins.js";
+import { vanillaSkin } from "./vanilla.js";
 import type { AccountRow } from "./types.js";
 
 /**
@@ -88,6 +89,14 @@ export function texturedProfile(
       url: skinUrl(account.skin_sha1, origin),
       // Тонкие руки помечаются метаданными; классическая модель — без них.
       ...(account.skin_model === "slim" ? { metadata: { model: "slim" } } : {}),
+    };
+  } else {
+    // Без своего скина игра подставила бы стандартный сама, но какой именно —
+    // решала бы по-своему. Называем его явно, чтобы в лаунчере и в игре был один.
+    const fallback = vanillaSkin(account.id);
+    textures.SKIN = {
+      url: fallback.url,
+      ...(fallback.model === "slim" ? { metadata: { model: "slim" } } : {}),
     };
   }
 

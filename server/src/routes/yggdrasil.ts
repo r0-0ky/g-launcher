@@ -10,6 +10,7 @@ import {
 } from "../gameauth.js";
 import { accountFromRequest } from "./account.js";
 import { originOf } from "../util.js";
+import { VANILLA_DOMAIN } from "../vanilla.js";
 
 /**
  * Протокол Yggdrasil — тот же, по которому игра ходит к Mojang. Клиент и
@@ -47,7 +48,7 @@ export async function yggdrasilRoutes(app: FastifyInstance): Promise<void> {
         "feature.non_email_login": true,
       },
       // Откуда игре разрешено брать скины: свой домен и, если настроен, бакет.
-      skinDomains: [host, `.${host}`, ".r2.dev", ".onlyg.land"],
+      skinDomains: [host, `.${host}`, ".r2.dev", ".onlyg.land", VANILLA_DOMAIN],
       signaturePublickey: publicKeyPem(),
     };
   });

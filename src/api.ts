@@ -118,6 +118,25 @@ export interface Texture {
   active: boolean;
 }
 
+export interface ShopItem {
+  id: number;
+  kind: "skin" | "cape";
+  name: string;
+  price: number;
+  model: "classic" | "slim";
+  /** Качество: от зелёного к легендарному. */
+  rarity: "green" | "blue" | "purple" | "legendary";
+  url: string;
+  owned: boolean;
+}
+
+export interface Shop {
+  coins: number;
+  /** Скин игрока — на нём показываем плащи с витрины. */
+  wearing: { skin: string; model: "classic" | "slim" };
+  items: ShopItem[];
+}
+
 export interface Library {
   profile: {
     id: string;
@@ -125,6 +144,12 @@ export interface Library {
     skinModel: "classic" | "slim";
     hasSkin: boolean;
     hasCape: boolean;
+    /** Кошелёк в G-коинах. */
+    coins: number;
+    /** Заливка своих текстур может быть закрыта — тогда прячем кнопки. */
+    canUpload: boolean;
+    /** Стандартный скин Minecraft: его видно, пока свой не надет. */
+    defaultSkin: { name: string; model: "classic" | "slim"; url: string };
   };
   skins: Texture[];
   capes: Texture[];
@@ -158,6 +183,9 @@ export const api = {
   glandUploadTexture: (path: string, kind: "skin" | "cape", model: "classic" | "slim") =>
     invoke<Library>("gland_upload_texture", { path, kind, model }),
   glandSetModel: (model: "classic" | "slim") => invoke<Library>("gland_set_model", { model }),
+  /** Магазин: витрина и покупка за G-коины. */
+  glandShop: () => invoke<Shop>("gland_shop"),
+  glandBuy: (id: number) => invoke<Library>("gland_buy", { id }),
   glandSelectTexture: (id: number) => invoke<Library>("gland_select_texture", { id }),
   glandClearTexture: (kind: "skin" | "cape") =>
     invoke<Library>("gland_clear_texture", { kind }),

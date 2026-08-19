@@ -1,5 +1,6 @@
 import type { Account, Mode } from "../api";
 import { loaderLabel } from "../api";
+import coin from "../assets/coin.png";
 import logo from "../assets/logo-gland.webp";
 import { Reload, Settings, User, VolumeOff, VolumeOn } from "./icons";
 
@@ -10,6 +11,11 @@ interface Props {
   account: Account | null;
   onAccountClick: () => void;
   onSettingsClick: () => void;
+  onShopClick: () => void;
+  /** Кошелёк игрока. null — показывать нечего. */
+  coins: number | null;
+  /** Открыт ли сейчас магазин — подсвечиваем пункт. */
+  shopActive: boolean;
   onRefresh: () => void;
   refreshing: boolean;
   updatable: Record<string, boolean>;
@@ -24,6 +30,9 @@ export function Sidebar({
   account,
   onAccountClick,
   onSettingsClick,
+  onShopClick,
+  shopActive,
+  coins,
   onRefresh,
   refreshing,
   updatable,
@@ -35,6 +44,15 @@ export function Sidebar({
       <div className="brand">
         <img className="brand-logo" src={logo} alt="G LAND" draggable={false} />
       </div>
+
+      <button
+        className={`shop-link${shopActive ? " active" : ""}`}
+        onClick={onShopClick}
+      >
+        <img src={coin} alt="" draggable={false} />
+        <span>Магазин</span>
+        {coins !== null && <span className="shop-link-coins">{coins}</span>}
+      </button>
 
       <div className="sidebar-head">
         <span>Режимы</span>

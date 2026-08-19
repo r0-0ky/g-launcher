@@ -12,9 +12,21 @@ interface Props {
   model: "classic" | "slim";
   width?: number;
   height?: number;
+  /** Модель сама поворачивается — так на витрине видно и спину, и плащ. */
+  rotate?: boolean;
+  /** Мышью крутить нельзя: на маленьких плитках это только мешает. */
+  locked?: boolean;
 }
 
-export function SkinPreview({ skin, cape, model, width = 180, height = 260 }: Props) {
+export function SkinPreview({
+  skin,
+  cape,
+  model,
+  width = 180,
+  height = 260,
+  rotate = false,
+  locked = false,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<SkinViewer | null>(null);
 
@@ -27,6 +39,9 @@ export function SkinPreview({ skin, cape, model, width = 180, height = 260 }: Pr
     viewer.animation = new IdleAnimation();
     viewer.controls.enableZoom = false;
     viewer.controls.enablePan = false;
+    viewer.controls.enableRotate = !locked;
+    viewer.autoRotate = rotate;
+    viewer.autoRotateSpeed = 1.2;
     viewer.zoom = 0.85;
     viewerRef.current = viewer;
 
@@ -34,7 +49,7 @@ export function SkinPreview({ skin, cape, model, width = 180, height = 260 }: Pr
       viewer.dispose();
       viewerRef.current = null;
     };
-  }, [width, height]);
+  }, [width, height, rotate, locked]);
 
   useEffect(() => {
     const viewer = viewerRef.current;

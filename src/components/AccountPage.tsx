@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Account, Bootstrap, Library } from "../api";
 import { api, errorText } from "../api";
 import { Button } from "./McButton";
-import { Close } from "./icons";
+import { Close, Logout, NoTexture } from "./icons";
 import { SkinPreview } from "./SkinPreview";
 
 interface Props {
@@ -137,6 +137,7 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
         </Button>
       </header>
 
+
       <div className="account-columns">
         <div className="account-main">
 
@@ -166,8 +167,9 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                   </div>
                 </div>
               </button>
-              <Button variant="clear" className="danger" onClick={() => remove(account.id)}>
-                Удалить
+              <Button variant="secondary" onClick={() => remove(account.id)} title="Выйти из аккаунта">
+                <Logout />
+                Выйти
               </Button>
             </div>
           ))}
@@ -196,6 +198,17 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
             <div className="field">
               <span>Скин</span>
               <div className="texture-grid">
+                {/* Пустая ячейка: без своей текстуры игра сама подставит один
+                    из стандартных скинов Mojang — они бесплатные для всех. */}
+                <div className={`texture${library.profile.hasSkin ? "" : " active"}`}>
+                  <button
+                    className="texture-none"
+                    title="Без скина — игра подставит стандартный"
+                    onClick={() => textureAction(api.glandClearTexture("skin"))}
+                  >
+                    <NoTexture size={28} />
+                  </button>
+                </div>
                 {library.skins.map((texture) => (
                   <div
                     key={texture.id}
@@ -216,14 +229,13 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                     </button>
                   </div>
                 ))}
-                {library.skins.length === 0 && (
-                  <span className="muted">Пока ни одного — залейте свой</span>
-                )}
               </div>
               <div className="row">
-                <Button variant="secondary" onClick={() => uploadTexture("skin")}>
-                  Загрузить скин
-                </Button>
+                {library.profile.canUpload && (
+                  <Button variant="secondary" onClick={() => uploadTexture("skin")}>
+                    Загрузить скин
+                  </Button>
+                )}
                 <label className="switch" title="Тонкие руки, как у модели Alex">
                   <input
                     type="checkbox"
@@ -241,21 +253,24 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                   </span>
                   <span>Тонкие руки</span>
                 </label>
-                {library.profile.hasSkin && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => textureAction(api.glandClearTexture("skin"))}
-                  >
-                    Снять
-                  </Button>
-                )}
               </div>
-              <small>Модель выбирается до загрузки: 64×64 или 64×32, не больше 200 КБ.</small>
+              {library.profile.canUpload && (
+                <small>Модель выбирается до загрузки: 64×64 или 64×32, не больше 200 КБ.</small>
+              )}
             </div>
 
             <div className="field">
               <span>Плащ</span>
               <div className="texture-grid">
+                <div className={`texture${library.profile.hasCape ? "" : " active"}`}>
+                  <button
+                    className="texture-none cape"
+                    title="Без плаща"
+                    onClick={() => textureAction(api.glandClearTexture("cape"))}
+                  >
+                    <NoTexture size={28} />
+                  </button>
+                </div>
                 {library.capes.map((texture) => (
                   <div
                     key={texture.id}
@@ -275,22 +290,17 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                     </button>
                   </div>
                 ))}
-                {library.capes.length === 0 && <span className="muted">Плащей пока нет</span>}
               </div>
               <div className="row">
-                <Button variant="secondary" onClick={() => uploadTexture("cape")}>
-                  Загрузить плащ
-                </Button>
-                {library.profile.hasCape && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => textureAction(api.glandClearTexture("cape"))}
-                  >
-                    Снять
+                {library.profile.canUpload && (
+                  <Button variant="secondary" onClick={() => uploadTexture("cape")}>
+                    Загрузить плащ
                   </Button>
                 )}
               </div>
-              <small>Вдвое шире, чем выше: 64×32, 128×64, 256×128 или 512×256.</small>
+              {library.profile.canUpload && (
+                <small>Вдвое шире, чем выше: 64×32, 128×64, 256×128 или 512×256.</small>
+              )}
             </div>
           </>
         )}
@@ -317,10 +327,12 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
         </div>
 
         <aside className="account-side">
+          {/* Ничего не надето — показываем тот же стандартный скин, который
+              подставится в игре, а не пустую модель. */}
           <SkinPreview
-            skin={activeSkin?.url ?? null}
+            skin={activeSkin?.url ?? library?.profile.defaultSkin?.url ?? null}
             cape={activeCape?.url ?? null}
-            model={activeSkin?.model ?? "classic"}
+            model={activeSkin?.model ?? library?.profile.defaultSkin?.model ?? "classic"}
             width={260}
             height={380}
           />

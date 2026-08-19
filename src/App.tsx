@@ -13,6 +13,7 @@ import { ModeView } from "./components/ModeView";
 import { Console } from "./components/Console";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { AccountPage } from "./components/AccountPage";
+import { ShopPage } from "./components/ShopPage";
 import { Bubbles, Snail, Sponge, Starfish, Jellyfish } from "./components/decor";
 import { Intro } from "./components/Intro";
 import { UpdateBanner } from "./components/UpdateBanner";
@@ -34,7 +35,10 @@ export default function App() {
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAccounts, setShowAccounts] = useState(false);
+  /** Что показываем в основной области: режим, аккаунт или магазин. */
+  const [screen, setScreen] = useState<"mode" | "account" | "shop">("mode");
+  /** Кошелёк для панели слева. null — аккаунта G Land нет, показывать нечего. */
+  const [coins, setCoins] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [introDone, setIntroDone] = useState(false);
@@ -45,6 +49,15 @@ export default function App() {
   const musicRef = useRef<HTMLAudioElement>(null);
 
   const selfUpdate = useSelfUpdate();
+
+  const refreshCoins = useCallback(async () => {
+    try {
+      setCoins((await api.glandTextures()).profile.coins);
+    } catch {
+      // Аккаунта G Land нет или сервер недоступен — просто не показываем кошелёк.
+      setCoins(null);
+    }
+  }, []);
 
   const selectedRef = useRef<string | null>(null);
   selectedRef.current = selectedId;
@@ -106,8 +119,9 @@ export default function App() {
         setError(errorText(err));
       }
       void loadManifest(false);
+      void refreshCoins();
     })();
-  }, [loadManifest]);
+  }, [loadManifest, refreshCoins]);
 
   // Заглавная песня: «включено» — реально играем (зациклено), «выключено» — пауза.
   // Управляем play/pause явно, иначе после выключения звук не возвращается.
@@ -183,7 +197,7 @@ export default function App() {
   const handlePlay = () => {
     if (!selected) return;
     if (!account) {
-      setShowAccounts(true);
+      setScreen("account");
       return;
     }
     void runTask(async () => {
@@ -245,11 +259,15 @@ export default function App() {
         modes={modes}
         selectedId={selectedId}
         onSelect={(id) => {
+          setScreen("mode");
           setSelectedId(id);
           void refreshReport(id);
         }}
         account={account}
-        onAccountClick={() => setShowAccounts(true)}
+        onAccountClick={() => setScreen("account")}
+        onShopClick={() => setScreen("shop")}
+        shopActive={screen === "shop"}
+        coins={coins}
         onSettingsClick={() => setShowSettings(true)}
         onRefresh={() => void loadManifest(true)}
         refreshing={refreshing}
@@ -271,12 +289,17 @@ export default function App() {
           </div>
         )}
 
-        {showAccounts && bootstrap ? (
+        {screen === "shop" ? (
+          <ShopPage onBought={refreshCoins} />
+        ) : screen === "account" && bootstrap ? (
           <AccountPage
             accounts={bootstrap.accounts}
             activeId={bootstrap.activeAccount}
-            onClose={() => setShowAccounts(false)}
-            onChanged={(next) => setBootstrap(next)}
+            onClose={() => setScreen("mode")}
+            onChanged={(next) => {
+              setBootstrap(next);
+              void refreshCoins();
+            }}
           />
         ) : selected ? (
           <ModeView

@@ -302,6 +302,53 @@ pub async fn delete_texture(client: &Client, base: &str, session: &str, id: i64)
     .await
 }
 
+/// Вещь на витрине магазина.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShopItem {
+    pub id: i64,
+    pub kind: String,
+    pub name: String,
+    pub price: i64,
+    pub model: String,
+    /// Качество: зелёное, синее, фиолетовое или легендарное.
+    pub rarity: String,
+    pub url: String,
+    /// Уже куплено — покупать второй раз нечего.
+    pub owned: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shop {
+    pub coins: i64,
+    pub items: Vec<ShopItem>,
+}
+
+pub async fn shop(client: &Client, base: &str, session: &str) -> Result<Shop> {
+    let response = client
+        .get(format!("{base}/api/me/shop"))
+        .bearer_auth(session)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        return Err(fail(response).await);
+    }
+    Ok(response.json().await?)
+}
+
+/// Покупка. В ответе — обновлённая библиотека: вещь сразу можно надеть.
+pub async fn buy(client: &Client, base: &str, session: &str, id: i64) -> Result<Library> {
+    library(
+        client
+            .post(format!("{base}/api/me/shop/{id}/buy"))
+            .bearer_auth(session)
+            .send()
+            .await?,
+    )
+    .await
+}
+
 /// Откуда берём authlib-injector: у проекта есть служебный адрес с последней
 /// сборкой и её контрольной суммой.
 const AGENT_LATEST: &str = "https://authlib-injector.yushi.moe/artifact/latest.json";

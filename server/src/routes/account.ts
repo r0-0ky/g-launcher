@@ -7,6 +7,7 @@ import { db, queries } from "../db.js";
 import { iconUrl, randomItemIcon } from "../icons.js";
 import { dropSkin, inspectTexture, putSkin, skinUrl } from "../skins.js";
 import { originOf } from "../util.js";
+import { vanillaSkin } from "../vanilla.js";
 import { loginUrl, sendMessage } from "../telegram.js";
 import type { AccountRow } from "../types.js";
 
@@ -55,6 +56,8 @@ function profileOf(account: AccountRow) {
     /** Заливка своих текстур может быть закрыта — тогда прячем кнопки. */
     canUpload: config.allowPlayerUploads,
     banned: Boolean(account.banned),
+    /** Что покажем, пока свой скин не надет: стандартный скин Minecraft. */
+    defaultSkin: vanillaSkin(account.id),
   };
 }
 
@@ -425,9 +428,16 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
     const origin = originOf(request);
     const owned = new Set(queries.purchasesOf.all(account.id).map((row) => row.item_id));
 
+    const fallback = vanillaSkin(account.id);
+
     return {
       coins: account.coins ?? 0,
-    avatar: account.avatar_icon ? iconUrl(account.avatar_icon) : null,
+      avatar: account.avatar_icon ? iconUrl(account.avatar_icon) : null,
+      /** Что на игроке сейчас: на этом скине показываем плащи с витрины. */
+      wearing: {
+        skin: account.skin_sha1 ? skinUrl(account.skin_sha1, origin) : fallback.url,
+        model: account.skin_sha1 ? account.skin_model : fallback.model,
+      },
       items: queries.shopItems.all().map((item) => ({
         id: item.id,
         kind: item.kind,

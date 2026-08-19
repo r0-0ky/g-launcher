@@ -452,6 +452,20 @@ async fn gland_upload_texture(
     .await
 }
 
+/// Витрина магазина: что продаётся и сколько монет на руках.
+#[tauri::command]
+async fn gland_shop(state: State<'_, AppState>) -> Result<gland::Shop> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::shop(&state.client, &base, &session).await
+}
+
+/// Покупка: в ответе обновлённая библиотека, вещь сразу можно надеть.
+#[tauri::command]
+async fn gland_buy(state: State<'_, AppState>, id: i64) -> Result<gland::Library> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::buy(&state.client, &base, &session, id).await
+}
+
 #[tauri::command]
 async fn gland_set_model(state: State<'_, AppState>, model: String) -> Result<gland::Library> {
     let (base, session, _) = gland_session(&state).await?;
@@ -643,6 +657,8 @@ pub fn run() {
             gland_set_nickname,
             gland_textures,
             gland_upload_texture,
+            gland_shop,
+            gland_buy,
             gland_set_model,
             gland_select_texture,
             gland_clear_texture,

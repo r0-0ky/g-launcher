@@ -73,6 +73,18 @@ export const Check = icon([
   "M10 18H8v-2h2v2Zm-2-2H6v-2h2v2Zm4-2v2h-2v-2h2Zm-6 0H4v-2h2v2Zm8 0h-2v-2h2v2Zm2-2h-2v-2h2v2Zm2-2h-2V8h2v2Zm2-2h-2V6h2v2Z",
 ]);
 
+export const Logout = icon([
+  "M8 11h12v2H8zm8-2h2v2h-2z",
+  "M14 7h2v10h-2zm2 6h2v2h-2zM6 2h12v2H6zm0 18h12v2H6zM4 4h2v16H4zm14 0h2v3h-2zm0 13h2v3h-2z",
+]);
+
+/** Пустая ячейка: коробка с крестом — «ничего не надето». */
+export const NoTexture = icon([
+  "M2 2h20v2H2zm0 18h20v2H2zM2 4h2v16H2zm18 0h2v16h-2z",
+  "M7 7h2v2H7zm2 2h2v2H9zm2 2h2v2h-2zm2-2h2v2h-2zm2-2h2v2h-2z",
+  "M7 15h2v2H7zm2-2h2v2H9zm4 0h2v2h-2zm2 2h2v2h-2z",
+]);
+
 export const User = icon([
   "M9 2h6v2H9zm0 8h6v2H9zm6-6h2v6h-2zM7 4h2v6H7zM4 18h2v4H4zm14 0h2v4h-2zM8 14h8v2H8zm-2 2h2v2H6zm10 0h2v2h-2z",
 ]);
