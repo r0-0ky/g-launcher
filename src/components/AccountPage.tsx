@@ -4,7 +4,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Account, Bootstrap, Library } from "../api";
 import { api, errorText } from "../api";
 import { Button } from "./McButton";
-import { Close, Logout, NoTexture } from "./icons";
+import { Logout, NoTexture } from "./icons";
 import { SkinPreview } from "./SkinPreview";
 import { Loader } from "./Loader";
 
@@ -223,13 +223,6 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                       style={{ backgroundImage: `url(${texture.url})` }}
                       onClick={() => textureAction(api.glandSelectTexture(texture.id))}
                     />
-                    <button
-                      className="texture-drop"
-                      title="Убрать из библиотеки"
-                      onClick={() => textureAction(api.glandDeleteTexture(texture.id))}
-                    >
-                      <Close size={14} />
-                    </button>
                   </div>
                 ))}
               </div>
@@ -284,13 +277,6 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                       style={{ backgroundImage: `url(${texture.url})` }}
                       onClick={() => textureAction(api.glandSelectTexture(texture.id))}
                     />
-                    <button
-                      className="texture-drop"
-                      title="Убрать из библиотеки"
-                      onClick={() => textureAction(api.glandDeleteTexture(texture.id))}
-                    >
-                      <Close size={14} />
-                    </button>
                   </div>
                 ))}
               </div>
