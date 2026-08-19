@@ -2,7 +2,7 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { config } from "../config.js";
 import { MONOCRAFT_BASE64 } from "./fonts.js";
@@ -188,9 +188,13 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .send(createReadStream(file));
   });
 
-  app.get("/download/poster.jpg", async (request, reply) => {
-    const file = assetPath(POSTER);
-    if (!file) return reply.code(404).send({ error: "постер не загружен" });
+  app.get<{ Params: { name: string } }>(
+    "/download/:name(poster|secret-bg).jpg",
+    async (request, reply) => {
+    const file = assetPath(
+      request.params.name === "poster" ? POSTER : "secret-bg.jpg"
+    );
+    if (!file) return reply.code(404).send({ error: "не найдено" });
 
     const info = statSync(file);
     const etag = tagOf(info);
@@ -202,15 +206,18 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .header("content-length", info.size)
       .type("image/jpeg")
       .send(createReadStream(file));
-  });
-
-  app.get<{ Params: { name: string } }>(
-    "/download/:name(background|background-mobile).mp4",
-    async (request, reply) => {
-    const file = assetPath("download-" + request.params.name + ".mp4");
-    if (!file) {
-      return reply.code(404).send({ error: "фон не загружен" });
     }
+  );
+
+  /** Отдаёт файл кусками: без этого Safari не проигрывает ни видео, ни звук. */
+  async function sendRanged(
+    request: FastifyRequest,
+    reply: FastifyReply,
+    name: string,
+    type: string
+  ) {
+    const file = assetPath(name);
+    if (!file) return reply.code(404).send({ error: "не найдено" });
 
     const info = statSync(file);
     const etag = tagOf(info);
@@ -222,9 +229,8 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .header("accept-ranges", "bytes")
       .header("etag", etag)
       .header("cache-control", "public, max-age=86400")
-      .type("video/mp4");
+      .type(type);
 
-    // Браузеры (особенно Safari) просят видео кусками — без этого фон не поедет.
     const match = /^bytes=(\d*)-(\d*)$/.exec(request.headers.range ?? "");
     if (match) {
       const start = match[1] ? Number(match[1]) : 0;
@@ -243,7 +249,16 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
     }
 
     return reply.header("content-length", info.size).send(createReadStream(file));
-    }
+  }
+
+  app.get<{ Params: { name: string } }>(
+    "/download/:name(background|background-mobile).mp4",
+    async (request, reply) =>
+      sendRanged(request, reply, "download-" + request.params.name + ".mp4", "video/mp4")
+  );
+
+  app.get("/download/secret-theme.mp3", async (request, reply) =>
+    sendRanged(request, reply, "secret-theme.mp3", "audio/mpeg")
   );
 
   app.get<{ Params: { name: string } }>("/download/fonts/:name", async (request, reply) => {
@@ -297,8 +312,16 @@ const page = `<!doctype html>
     background-attachment: fixed;
   }
 
+  /* Пасхалка: двадцать нажатий на кнопку подписи — и фон другой. Картинка
+     маленькая, поэтому растягиваем её пикселями, а не мылом. */
+  body.secret { background: #05070c url("/download/secret-bg.jpg") center / cover no-repeat fixed; }
+  body.secret .bg { display: none; }
+  body.secret .bg-dim { background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.72)); }
+  body.secret .splash { color: #ff5b5b; }
+
   /* --- Фон --- */
   .bg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+  body.secret { image-rendering: pixelated; }
   .bg-dim {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
     /* Лёгкая виньетка: в игре панорама не гасится, контраст держат сами кнопки. */
@@ -666,7 +689,9 @@ const page = `<!doctype html>
 
   // Esc возвращает в меню — как в игре.
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") show("menu");
+    if (event.key !== "Escape") return;
+    if (typeof secretOn !== "undefined" && secretOn) secret(false);
+    show("menu");
   });
 
   /* --- Жёлтая подпись --- */
@@ -694,8 +719,46 @@ const page = `<!doctype html>
     splash.textContent = next === splash.textContent ? SPLASHES[0] : next;
   }
   splash.addEventListener("click", roll);
-  document.getElementById("splash-roll").addEventListener("click", roll);
   roll();
+
+  /* Пасхалка: двадцать нажатий на кнопку смены подписи включают ночной режим —
+     другой фон и своя песня. Двадцать первое (или Esc) выключает обратно. */
+  var SECRET_AT = 20;
+  var secretHits = 0;
+  var secretOn = false;
+  var theme = null;
+
+  function secret(on) {
+    secretOn = on;
+    document.body.classList.toggle("secret", on);
+    if (on) {
+      if (!theme) {
+        theme = new Audio("/download/secret-theme.mp3");
+        theme.loop = true;
+        theme.volume = 0.6;
+      }
+      // Нажатие — это жест пользователя, поэтому автозапуск звука разрешён.
+      theme.play().catch(function () { undefined; });
+      splash.textContent = "ночной режим";
+    } else {
+      if (theme) {
+        theme.pause();
+        theme.currentTime = 0;
+      }
+      secretHits = 0;
+      roll();
+    }
+  }
+
+  document.getElementById("splash-roll").addEventListener("click", function () {
+    if (secretOn) {
+      secret(false);
+      return;
+    }
+    secretHits += 1;
+    if (secretHits >= SECRET_AT) secret(true);
+    else roll();
+  });
 
   /* Кнопка в углу нижнего ряда удваивает пузырьки. Потолок нужен, чтобы
      страница не легла от тысячи анимаций; на потолке следующее нажатие
