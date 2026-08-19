@@ -20,7 +20,7 @@ interface Props {
 
 function actionLabel(report: UpdateReport | null, running: boolean, busy: boolean) {
   if (running) return "Игра запущена";
-  if (busy) return "Работаем…";
+  if (busy) return "Установка";
   if (!report || !report.installed) return "Установить и играть";
   if (report.needsUpdate) return "Обновить и играть";
   return "Играть";
