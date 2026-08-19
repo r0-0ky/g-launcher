@@ -1327,8 +1327,10 @@ input:focus {
 .texture-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 4px 0 8px;
+  /* Крестик выступает за плитку на 6px, поэтому зазоры больше обычного:
+     иначе он налезает на соседнюю плитку и на подпись сверху. */
+  gap: 16px;
+  margin: 12px 0 14px;
   align-items: flex-start;
 }
 
