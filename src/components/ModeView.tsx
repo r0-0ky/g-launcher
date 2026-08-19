@@ -2,6 +2,7 @@ import type { Mode, ProgressEvent, UpdateReport } from "../api";
 import { formatBytes, loaderLabel } from "../api";
 import { Jellyfish, Starfish } from "./decor";
 import { Button } from "./McButton";
+import { Check, Folder, Play, Reload, Trash } from "./icons";
 
 interface Props {
   mode: Mode;
@@ -115,6 +116,7 @@ export function ModeView({
 
       <div className="actions">
         <Button variant="primary" onClick={onPlay} disabled={busy || running}>
+          <Play />
           {actionLabel(report, running, busy)}
         </Button>
         {running ? (
@@ -123,18 +125,22 @@ export function ModeView({
           </Button>
         ) : (
           <Button variant="secondary" onClick={onUpdate} disabled={busy}>
+            <Reload />
             Только обновить
           </Button>
         )}
         <Button variant="secondary" onClick={onVerify} disabled={busy || running}>
+          <Check />
           Проверить файлы
         </Button>
         <Button variant="secondary" onClick={onOpenFolder}>
+          <Folder />
           Папка режима
         </Button>
         {/* Удалять нечего, пока сборка не установлена — кнопку не показываем вовсе. */}
         {report?.installed && (
           <Button variant="secondary" className="danger" onClick={onDelete} disabled={busy || running}>
+            <Trash />
             Удалить
           </Button>
         )}

@@ -1,6 +1,7 @@
 import type { Account, Mode } from "../api";
 import { loaderLabel } from "../api";
-import logo from "../assets/logo.jpg";
+import logo from "../assets/logo-gland.webp";
+import { Reload, Settings, User } from "./icons";
 
 interface Props {
   modes: Mode[];
@@ -28,17 +29,18 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <img className="brand-logo" src={logo} alt="G Launcher" draggable={false} />
-        <div className="brand-titles">
-          <div className="brand-title">G Launcher</div>
-          <div className="brand-sub">лаунчер</div>
-        </div>
+        <img className="brand-logo" src={logo} alt="G LAND" draggable={false} />
       </div>
 
       <div className="sidebar-head">
         <span>Режимы</span>
-        <button className="icon-button" onClick={onRefresh} disabled={refreshing} title="Обновить список">
-          {refreshing ? "…" : "⟳"}
+        <button
+          className={`icon-button${refreshing ? " spinning" : ""}`}
+          onClick={onRefresh}
+          disabled={refreshing}
+          title="Обновить список"
+        >
+          <Reload />
         </button>
       </div>
 
@@ -69,7 +71,7 @@ export function Sidebar({
       <div className="sidebar-footer">
         <button className="account-button" onClick={onAccountClick}>
           <div className="avatar">
-            {account ? account.username.slice(0, 1).toUpperCase() : "?"}
+            {account ? account.username.slice(0, 1).toUpperCase() : <User size={16} />}
           </div>
           <div className="account-text">
             <div className="account-name">{account ? account.username : "Нет аккаунта"}</div>
@@ -79,7 +81,7 @@ export function Sidebar({
           </div>
         </button>
         <button className="icon-button" onClick={onSettingsClick} title="Настройки">
-          ⚙
+          <Settings />
         </button>
       </div>
     </aside>

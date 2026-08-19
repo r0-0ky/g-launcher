@@ -249,21 +249,14 @@ input:focus {
 }
 
 .brand {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  padding: 2px 4px 10px;
+  display: block;
+  padding: 2px 2px 8px;
 }
 
 .brand-logo {
   width: 100%;
-  aspect-ratio: 735 / 472;
-  object-fit: cover;
+  height: auto;
   display: block;
-  border: 3px solid var(--ink);
-  border-radius: 16px;
-  box-shadow: 2px 3px 0 rgba(10, 40, 60, 0.35);
 }
 
 .brand-titles {
@@ -1242,12 +1235,25 @@ input:focus {
 
 /* Строки лога в консоли тоже носят класс .error — их эта плашка не касается. */
 .error:not(.log-line) {
-  background: #8c2f22;
-  color: #ffe3dd;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+  background: var(--panel);
+  color: var(--panel-ink);
+  text-shadow: none;
+  align-items: center;
+  gap: 10px;
 }
 
-.brand-logo,
+/* Текст прижат влево, значок и крестик — по краям. */
+.error.banner > span {
+  flex: 1;
+  text-align: left;
+}
+
+/* Единственное красное пятно в интерфейсе — сам значок ошибки. */
+.error-mark {
+  flex: 0 0 auto;
+  color: #b3392a;
+}
+
 .intro-skip {
   border: none;
   border-radius: 0;
@@ -1335,4 +1341,25 @@ input:focus {
   box-shadow: none;
   text-transform: none;
   letter-spacing: 0;
+}
+
+/* --- Иконки --- */
+
+/* Кнопка с текстом и значком: библиотека уже flex, остаётся только зазор. */
+.Button {
+  gap: 8px;
+}
+
+.icon-button svg {
+  display: block;
+}
+
+.icon-button.spinning svg {
+  animation: pixel-spin 0.9s steps(8) infinite;
+}
+
+@keyframes pixel-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -19,7 +19,7 @@ import { UpdateBanner } from "./components/UpdateBanner";
 import { useSelfUpdate } from "./selfUpdate";
 import themeAudio from "./assets/theme.mp3";
 import { Button } from "./components/McButton";
-import { VolumeOff, VolumeOn } from "./components/icons";
+import { Alert, Close, VolumeOff, VolumeOn } from "./components/icons";
 
 const MAX_LOG_LINES = 800;
 
@@ -261,9 +261,10 @@ export default function App() {
 
         {error && (
           <div className="error banner">
+            <Alert className="error-mark" />
             <span>{error}</span>
-            <Button variant="clear" onClick={() => setError(null)}>
-              ✕
+            <Button variant="clear" onClick={() => setError(null)} title="Скрыть">
+              <Close />
             </Button>
           </div>
         )}
