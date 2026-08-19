@@ -3,3 +3,7 @@ dist
 data
 .env
 *.log
+
+# В репозиторий едет только сжатый фон титульного экрана — исходники видео нет.
+assets/*.mp4
+!assets/download-background.mp4

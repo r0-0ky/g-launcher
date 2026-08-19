@@ -8,33 +8,34 @@ import { config } from "../config.js";
 import { PIXELIFY_CYRILLIC_BASE64, PIXELIFY_LATIN_BASE64 } from "./fonts.js";
 
 const BACKGROUND = "download-background.mp4";
+/** Первый кадр фона: показывается мгновенно, пока видео ещё качается. */
+const POSTER = "download-poster.jpg";
 
 /**
- * Фон титульного экрана лежит в репозитории и едет в образе (server/assets).
+ * Статика титульного экрана лежит в репозитории и едет в образе (server/assets).
  * Путь считается от этого модуля, а не от рабочей папки: и в `dist/routes`,
  * и в `src/routes` до `assets` ровно два уровня вверх.
  */
-const bundledBackground = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "assets",
-  BACKGROUND
-);
+const assetsDir = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "assets");
+
+/** Метка версии файла: размера и времени правки достаточно. */
+function tagOf(info: { size: number; mtimeMs: number }): string {
+  return `"${info.size.toString(16)}-${Math.trunc(info.mtimeMs).toString(16)}"`;
+}
 
 /**
- * Тот же файл в DATA_DIR перебивает вшитый — так фон можно заменить на живом
- * сервере, не пересобирая образ:
+ * Файл с тем же именем в DATA_DIR перебивает вшитый — так фон можно заменить
+ * на живом сервере, не пересобирая образ:
  *
  *   scp video.mp4 сервер:/srv/g-launcher/data/download-background.mp4
  *
  * Нет ни того, ни другого — страница останется с градиентом воды.
  */
-function backgroundPath(): string | null {
-  const override = resolve(config.dataDir, BACKGROUND);
+function assetPath(name: string): string | null {
+  const override = resolve(config.dataDir, name);
   if (existsSync(override)) return override;
-  if (existsSync(bundledBackground)) return bundledBackground;
-  return null;
+  const bundled = resolve(assetsDir, name);
+  return existsSync(bundled) ? bundled : null;
 }
 
 /**
@@ -156,16 +157,38 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
     "pixelify-cyrillic.woff2": PIXELIFY_CYRILLIC_BASE64,
   };
 
+  app.get("/download/poster.jpg", async (request, reply) => {
+    const file = assetPath(POSTER);
+    if (!file) return reply.code(404).send({ error: "постер не загружен" });
+
+    const info = statSync(file);
+    const etag = tagOf(info);
+    if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+
+    return reply
+      .header("etag", etag)
+      .header("cache-control", "public, max-age=86400")
+      .header("content-length", info.size)
+      .type("image/jpeg")
+      .send(createReadStream(file));
+  });
+
   app.get("/download/background.mp4", async (request, reply) => {
-    const file = backgroundPath();
+    const file = assetPath(BACKGROUND);
     if (!file) {
       return reply.code(404).send({ error: "фон не загружен" });
     }
 
     const info = statSync(file);
+    const etag = tagOf(info);
+    // Файл меняется только с деплоем, поэтому кэш на сутки, а свежесть
+    // проверяется дешёвым запросом с ETag.
+    if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+
     reply
       .header("accept-ranges", "bytes")
-      .header("cache-control", "public, max-age=600")
+      .header("etag", etag)
+      .header("cache-control", "public, max-age=86400")
       .type("video/mp4");
 
     // Браузеры (особенно Safari) просят видео кусками — без этого фон не поедет.
@@ -455,7 +478,7 @@ const page = `<!doctype html>
 </style>
 </head>
 <body>
-<video class="bg" id="bg" autoplay muted loop playsinline preload="auto"></video>
+<video class="bg" id="bg" autoplay muted loop playsinline preload="auto" poster="/download/poster.jpg"></video>
 <div class="bg-dim"></div>
 <div class="bubbles" id="bubbles"></div>
 
@@ -654,7 +677,11 @@ const page = `<!doctype html>
   /* --- Фон-видео. Нет файла — остаётся вода. --- */
   (function () {
     var video = document.getElementById("bg");
-    video.addEventListener("error", function () { video.remove(); });
+    // Видео нет — оставляем кадр-заглушку, если и его нет, останется вода.
+    video.addEventListener("error", function () {
+      video.removeAttribute("src");
+      video.load();
+    });
     video.src = "/download/background.mp4";
   })();
 
