@@ -127,12 +127,13 @@ input:focus {
   overflow: hidden;
 }
 
+/* Пузырь — первый кадр пиксельной ленты из assets/bubble.png (всего 7 кадров:
+   обычное состояние и шесть кадров лопания). */
 .bubble {
   position: absolute;
   bottom: -40px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.15) 60%, transparent 72%);
-  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  background: url("./assets/bubble.png") 0 0 / 700% 100% no-repeat;
+  image-rendering: pixelated;
   animation: rise linear infinite;
 }
 

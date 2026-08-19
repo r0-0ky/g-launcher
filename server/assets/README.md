@@ -22,3 +22,13 @@ ffmpeg -i исходник.mp4 -movflags +faststart -an \
 Заменить фон на живом сервере, не пересобирая образ, можно положив файл с тем
 же именем в `DATA_DIR` (`/srv/g-launcher/data/download-background.mp4`) — он
 имеет приоритет над этим.
+
+## `minecraft-react-ui.css`
+
+Стили кнопок из [minecraft-react-ui](https://github.com/josempineiro/minecraft-react-ui)
+0.6.0 (MIT, José Manuel Piñeiro Garcia). Скопированы как есть: страница
+`/download` — обычный HTML, пакет к ней не подключить, поэтому её разметка
+использует классы `.Button` из этого файла. В самом лаунчере стоит настоящий
+компонент из пакета.
+
+Обновить: `cp node_modules/minecraft-react-ui/build/minecraft-react-ui.css server/assets/`

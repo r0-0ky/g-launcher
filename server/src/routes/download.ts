@@ -157,6 +157,39 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
     "pixelify-cyrillic.woff2": PIXELIFY_CYRILLIC_BASE64,
   };
 
+  // Стили кнопок из minecraft-react-ui: страница не React-приложение,
+  // поэтому берёт их классы напрямую (файл лежит в assets, MIT).
+  app.get("/download/minecraft-react-ui.css", async (request, reply) => {
+    const file = assetPath("minecraft-react-ui.css");
+    if (!file) return reply.code(404).send({ error: "не найдено" });
+
+    const info = statSync(file);
+    const etag = tagOf(info);
+    if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+
+    return reply
+      .header("etag", etag)
+      .header("cache-control", "public, max-age=86400")
+      .type("text/css; charset=utf-8")
+      .send(createReadStream(file));
+  });
+
+  app.get("/download/bubble.png", async (request, reply) => {
+    const file = assetPath("bubble.png");
+    if (!file) return reply.code(404).send({ error: "не найдено" });
+
+    const info = statSync(file);
+    const etag = tagOf(info);
+    if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+
+    return reply
+      .header("etag", etag)
+      .header("cache-control", "public, max-age=86400")
+      .header("content-length", info.size)
+      .type("image/png")
+      .send(createReadStream(file));
+  });
+
   app.get("/download/poster.jpg", async (request, reply) => {
     const file = assetPath(POSTER);
     if (!file) return reply.code(404).send({ error: "постер не загружен" });
@@ -229,6 +262,7 @@ const page = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Gandoni Launcher — скачать</title>
 <meta name="description" content="Лаунчер Minecraft со сборками: моды, шейдеры и обновления ставятся сами." />
+<link rel="stylesheet" href="/download/minecraft-react-ui.css" />
 <style>
   /* Титульный экран в духе игрового меню. Шрифт и палитра — те же, что в
      самом лаунчере (src/styles.css). */
@@ -267,7 +301,7 @@ const page = `<!doctype html>
   }
   /* Пиксельный шрифт — на заголовки и кнопки: в нём «5» похожа на «S», а «ы»
      и «ш» нарисованы латиницей, поэтому версии и размеры остаются обычным. */
-  h1, h2, h3, .mc-btn, .logo, .splash, .num, .soon {
+  h1, h2, h3, .Button, .logo, .splash, .num, .soon {
     font-family: "Pixelify Sans", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
     font-weight: 400; letter-spacing: 0.4px;
   }
@@ -288,14 +322,15 @@ const page = `<!doctype html>
   /* --- Пузырьки: всплывают и лопаются по клику --- */
   .bubbles { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
   .bubble { position: absolute; bottom: -80px; pointer-events: auto; cursor: pointer; animation: rise linear infinite; }
+  /* Лента из 7 кадров: обычный пузырь и шесть кадров лопания. */
   .bubble .skin {
-    display: block; width: 100%; height: 100%; border-radius: 50%;
-    background: radial-gradient(circle at 32% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.18) 60%, transparent 72%);
-    border: 1.5px solid rgba(255, 255, 255, 0.65); transition: transform 0.12s ease;
+    display: block; width: 100%; height: 100%;
+    background: url("/download/bubble.png") 0 0 / 700% 100% no-repeat;
+    image-rendering: pixelated; transition: transform 0.12s ease;
   }
   .bubble:hover .skin { transform: scale(1.12); }
   .bubble.popping { animation-play-state: paused; pointer-events: none; }
-  .bubble.popping .skin { animation: pop 0.32s ease-out forwards; }
+  .bubble.popping .skin { transform: none; animation: pop 0.36s steps(1, end) forwards; }
   @keyframes rise {
     0%   { transform: translateY(0) translateX(0); opacity: 0; }
     10%  { opacity: 0.85; }
@@ -303,10 +338,14 @@ const page = `<!doctype html>
     90%  { opacity: 0.7; }
     100% { transform: translateY(-115vh) translateX(-16px); opacity: 0; }
   }
+  /* Кадры со второго по седьмой: пузырь схлопывается и разлетается брызгами. */
   @keyframes pop {
-    0%   { transform: scale(1); opacity: 0.95; }
-    35%  { transform: scale(0.8); opacity: 1; border-width: 3px; }
-    100% { transform: scale(1.8); opacity: 0; border-width: 1px; }
+    0%   { background-position-x: 16.6667%; }
+    20%  { background-position-x: 33.3333%; }
+    40%  { background-position-x: 50%; }
+    60%  { background-position-x: 66.6667%; }
+    80%  { background-position-x: 83.3333%; }
+    100% { background-position-x: 100%; }
   }
 
   /* --- Экраны меню --- */
@@ -343,43 +382,27 @@ const page = `<!doctype html>
 
   .menu { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .row2 { display: flex; gap: 8px; }
-  .row2 .mc-btn { flex: 1; }
+  .row2 .Button { flex: 1; }
 
   /* --- Кнопка меню --- */
-  /* Кнопка меню: тёмный камень, белая надпись с чёрной тенью, тонкая светлая
-     грань сверху и тёмная снизу. Наведение — как в игре: подсветка и белая рамка. */
-  .mc-btn {
-    display: block; width: 100%; padding: 10px 16px; font-size: 17px; text-align: center;
-    text-decoration: none; cursor: pointer; border: none; border-radius: 0;
-    background: linear-gradient(180deg, #7b7b7b, #666668);
-    color: #ffffff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.75);
+  /* Кнопки — классы .Button из minecraft-react-ui. Здесь только то, чего в
+     библиотеке нет: ширина на всю колонку, размер и квадратные по краям. */
+  .Button {
+    /* Шрифт Minecraft с библиотекой не поставляется — без этого будут засечки. */
+    font-family: inherit;
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 16px;
+    text-decoration: none;
     box-shadow:
-      inset 0 2px 0 0 rgba(255, 255, 255, 0.28),
-      inset 0 -2px 0 0 rgba(0, 0, 0, 0.35),
-      0 0 0 2px #1c1c20,
+      inset 0 -2px 0 0 var(--bezel-color),
+      inset -2px 0 0 0 var(--bezel-color),
+      inset 0 2px 0 0 var(--bezel-color-invert),
+      inset 2px 0 0 0 var(--bezel-color-invert),
       var(--drop);
   }
-  .mc-btn:hover:not(:disabled) {
-    background: linear-gradient(180deg, #8fa1c8, #6f80a8);
-    box-shadow:
-      inset 0 0 0 2px #ffffff,
-      inset 0 2px 0 2px rgba(255, 255, 255, 0.25),
-      0 0 0 2px #1c1c20,
-      var(--drop);
-  }
-  .mc-btn:active:not(:disabled) {
-    box-shadow:
-      inset 0 2px 0 0 rgba(0, 0, 0, 0.35),
-      inset 0 -2px 0 0 rgba(255, 255, 255, 0.2),
-      0 0 0 2px #1c1c20;
-  }
-  .mc-btn.go {
-    background: linear-gradient(180deg, var(--go-hi) 0 3px, var(--go) 3px, var(--go-deep));
-  }
-  .mc-btn.go:hover { background: linear-gradient(180deg, #79cc53 0 3px, var(--go-hi) 3px, var(--go)); }
-  .mc-btn:disabled { background: #56565a; color: #a6a6ac; cursor: not-allowed; }
-  /* Квадратные кнопки по краям нижнего ряда — как язык и специальные возможности. */
-  .mc-btn.square { width: 42px; flex: 0 0 42px; padding: 10px 0; font-size: 18px; }
+  .Button:disabled { cursor: not-allowed; opacity: 0.6; }
+  .Button.square { width: 46px; flex: 0 0 46px; padding: 12px 0; font-size: 18px; }
 
   /* --- Панель содержимого --- */
   .panel {
@@ -395,26 +418,12 @@ const page = `<!doctype html>
 
   /* --- Выбор системы --- */
   .os-tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  /* Вкладка системы — их же кнопка, только с иконкой над подписью.
+     Выбранная помечается штатным .Button_active. */
   .os-tab {
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
-    min-width: 110px; padding: 10px 12px; font: inherit; cursor: pointer;
-    background: var(--stone); color: var(--panel-ink); border: none; border-radius: 0;
-    box-shadow:
-      inset var(--px) var(--px) 0 0 var(--stone-hi),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-      0 0 0 var(--px) var(--outline),
-      var(--drop);
+    flex-direction: column; gap: 5px; min-width: 110px; width: auto;
+    padding: 10px 12px; font-size: 14px;
   }
-  .os-tab:hover:not(:disabled):not(.active) { background: var(--stone-hover); }
-  .os-tab.active {
-    background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
-    color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
-    box-shadow:
-      inset var(--px) var(--px) 0 0 rgba(0, 0, 0, 0.25),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 rgba(255, 255, 255, 0.35),
-      0 0 0 var(--px) var(--outline);
-  }
-  .os-tab:disabled { background: #9a9aa0; color: #e2e2e6; cursor: not-allowed; box-shadow: 0 0 0 var(--px) var(--outline); }
   .os-ico { width: 28px; height: 28px; fill: currentColor; }
   .os-ico .dim { fill: rgba(0, 0, 0, 0.5); }
   .os-ico .beak { fill: #f7e3ad; }
@@ -489,14 +498,14 @@ const page = `<!doctype html>
       <div class="splash" id="splash" title="Нажми, чтобы сменить"></div>
     </div>
     <div class="menu">
-      <button class="mc-btn go" data-go="download">Скачать</button>
-      <button class="mc-btn" data-go="about">Что внутри</button>
-      <button class="mc-btn" data-go="start">Как начать</button>
+      <button class="Button Button_primary" data-go="download">Скачать</button>
+      <button class="Button Button_secondary" data-go="about">Что внутри</button>
+      <button class="Button Button_secondary" data-go="start">Как начать</button>
       <div class="row2">
-        <button class="mc-btn square" id="bubbles-toggle" title="Пузырьки">🫧</button>
-        <a class="mc-btn" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
-        <a class="mc-btn" id="repo-link" href="https://github.com" target="_blank" rel="noreferrer">Исходники</a>
-        <button class="mc-btn square" id="splash-roll" title="Сменить подпись">✨</button>
+        <button class="Button Button_secondary square" id="bubbles-toggle" title="Пузырьки">🫧</button>
+        <a class="Button Button_secondary" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
+        <a class="Button Button_secondary" id="repo-link" href="https://github.com" target="_blank" rel="noreferrer">Исходники</a>
+        <button class="Button Button_secondary square" id="splash-roll" title="Сменить подпись">✨</button>
       </div>
     </div>
   </section>
@@ -511,7 +520,7 @@ const page = `<!doctype html>
       Лаунчер обновляется сам: при запуске проверяет новую версию, сверяет
       подпись и ставит в один клик. Возвращаться сюда не нужно.
     </p>
-    <button class="mc-btn" data-go="menu">Назад</button>
+    <button class="Button Button_secondary" data-go="menu">Назад</button>
   </section>
 
   <section class="screen" id="screen-about" hidden>
@@ -550,7 +559,7 @@ const page = `<!doctype html>
         </div>
       </div>
     </div>
-    <button class="mc-btn" data-go="menu">Назад</button>
+    <button class="Button Button_secondary" data-go="menu">Назад</button>
   </section>
 
   <section class="screen" id="screen-start" hidden>
@@ -571,7 +580,7 @@ const page = `<!doctype html>
         </li>
       </ol>
     </div>
-    <button class="mc-btn" data-go="menu">Назад</button>
+    <button class="Button Button_secondary" data-go="menu">Назад</button>
   </section>
 </main>
 
@@ -761,7 +770,7 @@ const page = `<!doctype html>
       ORDER.forEach(function (os) {
         var files = release.assets[os];
         var tab = document.createElement("button");
-        tab.className = "os-tab";
+        tab.className = "Button Button_secondary os-tab";
         tab.type = "button";
         tab.setAttribute("role", "tab");
         tab.dataset.os = os;
@@ -789,7 +798,9 @@ const page = `<!doctype html>
         Array.prototype.forEach.call(tabs.children, function (tab) {
           var on = tab.dataset.os === os;
           tab.setAttribute("aria-selected", on ? "true" : "false");
-          tab.classList.toggle("active", on);
+          tab.classList.toggle("Button_active", on);
+          tab.classList.toggle("Button_primary", on);
+          tab.classList.toggle("Button_secondary", !on);
         });
 
         panel.textContent = "";
@@ -797,7 +808,7 @@ const page = `<!doctype html>
         // Первый файл — рекомендованный: под macOS это .dmg, под Windows .exe.
         var best = files[0];
         var main = document.createElement("a");
-        main.className = "mc-btn go";
+        main.className = "Button Button_primary";
         main.href = best.url;
         main.textContent = "Скачать для " + NAMES[os];
         panel.appendChild(main);
