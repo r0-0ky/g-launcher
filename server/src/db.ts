@@ -1,7 +1,14 @@
 import Database from "better-sqlite3";
 
 import { ensureDataDirs, paths } from "./config.js";
-import type { AccountRow, ModeFileRow, ModeInput, ModeRow, TextureRow } from "./types.js";
+import type {
+  AccountRow,
+  ModeFileRow,
+  ModeInput,
+  ModeRow,
+  ShopItemRow,
+  TextureRow,
+} from "./types.js";
 
 // Модуль открывает базу прямо при импорте, поэтому папки создаём здесь же:
 // index.ts выполнится позже, чем эта строка.
@@ -127,7 +134,59 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_textures_account ON textures(account_id, kind);
+
+  -- Витрина: что продаётся за G-коины. Наполняется из админки.
+  CREATE TABLE IF NOT EXISTS shop_items (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind       TEXT NOT NULL CHECK (kind IN ('skin', 'cape')),
+    name       TEXT NOT NULL,
+    price      INTEGER NOT NULL DEFAULT 0,
+    sha1       TEXT NOT NULL,
+    model      TEXT NOT NULL DEFAULT 'classic',
+    -- Качество: зелёное, синее, фиолетовое, легендарное.
+    rarity     TEXT NOT NULL DEFAULT 'green'
+               CHECK (rarity IN ('green', 'blue', 'purple', 'legendary')),
+    visible    INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Что игрок уже купил. Цену храним на момент покупки: витрина меняется,
+  -- а история должна оставаться честной.
+  CREATE TABLE IF NOT EXISTS purchases (
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    item_id    INTEGER NOT NULL REFERENCES shop_items(id) ON DELETE CASCADE,
+    price      INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (account_id, item_id)
+  );
+
+  -- Каждое движение монет с причиной: иначе на вопрос «куда делись коины»
+  -- ответить будет нечем.
+  CREATE TABLE IF NOT EXISTS coin_ledger (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    delta      INTEGER NOT NULL,
+    reason     TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_ledger_account ON coin_ledger(account_id, created_at);
 `);
+
+// Качество добавилось позже витрины — в старых базах колонки нет.
+try {
+  db.exec(`ALTER TABLE shop_items ADD COLUMN rarity TEXT NOT NULL DEFAULT 'green'`);
+} catch {
+  // Колонка уже на месте.
+}
+
+// Кошелёк добавился позже аккаунтов — в старых базах колонки нет.
+try {
+  db.exec(`ALTER TABLE accounts ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`);
+} catch {
+  // Колонка уже на месте.
+}
 
 // Плащ добавился позже скина — в старых базах колонки нет.
 try {
@@ -201,6 +260,45 @@ export const queries = {
   dropTexture: db.prepare(`DELETE FROM textures WHERE id = ?`),
   countTextureUsers: db.prepare<[string], { count: number }>(
     `SELECT COUNT(*) AS count FROM textures WHERE sha1 = ?`
+  ),
+
+  // --- Монеты и магазин ---
+  addCoins: db.prepare(
+    `UPDATE accounts SET coins = coins + ?, updated_at = datetime('now') WHERE id = ?`
+  ),
+  writeLedger: db.prepare(
+    `INSERT INTO coin_ledger (account_id, delta, reason) VALUES (?, ?, ?)`
+  ),
+  ledgerOf: db.prepare<[string], { delta: number; reason: string; created_at: string }>(
+    `SELECT delta, reason, created_at FROM coin_ledger WHERE account_id = ?
+     ORDER BY created_at DESC LIMIT 50`
+  ),
+
+  shopItems: db.prepare<[], ShopItemRow>(
+    `SELECT * FROM shop_items WHERE visible = 1 ORDER BY sort_order, created_at DESC`
+  ),
+  allShopItems: db.prepare<[], ShopItemRow>(
+    `SELECT * FROM shop_items ORDER BY sort_order, created_at DESC`
+  ),
+  shopItem: db.prepare<[number], ShopItemRow>(`SELECT * FROM shop_items WHERE id = ?`),
+  addShopItem: db.prepare(
+    `INSERT INTO shop_items (kind, name, price, sha1, model, rarity, visible, sort_order)
+     VALUES (@kind, @name, @price, @sha1, @model, @rarity, @visible, @sort_order)`
+  ),
+  updateShopItem: db.prepare(
+    `UPDATE shop_items SET name = @name, price = @price, rarity = @rarity,
+     visible = @visible, sort_order = @sort_order WHERE id = @id`
+  ),
+  dropShopItem: db.prepare(`DELETE FROM shop_items WHERE id = ?`),
+
+  purchasesOf: db.prepare<[string], { item_id: number }>(
+    `SELECT item_id FROM purchases WHERE account_id = ?`
+  ),
+  hasPurchase: db.prepare<[string, number], { item_id: number }>(
+    `SELECT item_id FROM purchases WHERE account_id = ? AND item_id = ?`
+  ),
+  addPurchase: db.prepare(
+    `INSERT INTO purchases (account_id, item_id, price) VALUES (?, ?, ?)`
   ),
 
   setSkin: db.prepare(

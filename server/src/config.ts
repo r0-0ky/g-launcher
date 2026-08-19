@@ -31,6 +31,12 @@ export const config = {
    * Пусто — сгенерируем свой при старте, но тогда вебхук надо ставить самим.
    */
   telegramWebhookSecret: (process.env.TELEGRAM_WEBHOOK_SECRET ?? "").trim(),
+  /**
+   * Можно ли игрокам заливать свои скины и плащи. Выключено — косметика
+   * берётся только из магазина, и заливать может лишь админка.
+   */
+  allowPlayerUploads: (process.env.ALLOW_PLAYER_UPLOADS ?? "true").toLowerCase() !== "false",
+
   /** Сколько живёт сессия игрока в лаунчере. */
   accountSessionTtlMs: Number(process.env.ACCOUNT_SESSION_TTL_DAYS ?? 30) * 86400 * 1000,
 

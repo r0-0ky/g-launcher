@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { config, telegramReady } from "../config.js";
-import { queries } from "../db.js";
+import { db, queries } from "../db.js";
 import { dropSkin, inspectTexture, putSkin, skinUrl } from "../skins.js";
 import { originOf } from "../util.js";
 import { loginUrl, sendMessage } from "../telegram.js";
@@ -49,9 +49,29 @@ function profileOf(account: AccountRow) {
     skinModel: account.skin_model,
     hasSkin: Boolean(account.skin_sha1),
     hasCape: Boolean(account.cape_sha1),
+    coins: account.coins ?? 0,
+    /** Заливка своих текстур может быть закрыта — тогда прячем кнопки. */
+    canUpload: config.allowPlayerUploads,
     banned: Boolean(account.banned),
   };
 }
+
+/** Покупка целиком: монеты, история, запись о покупке и выдача вещи. */
+const buy = db.transaction(
+  (
+    accountId: string,
+    itemId: number,
+    price: number,
+    kind: "skin" | "cape",
+    sha1: string,
+    model: "classic" | "slim"
+  ) => {
+    queries.addCoins.run(-price, accountId);
+    queries.writeLedger.run(accountId, -price, `покупка #${itemId}`);
+    queries.addPurchase.run(accountId, itemId, price);
+    queries.addTexture.run({ account_id: accountId, kind, sha1, model });
+  }
+);
 
 /** Надевает текстуру: активные хранятся прямо в аккаунте. */
 function wear(
@@ -261,6 +281,12 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
       const account = await requireAccount(request, reply);
       if (!account) return;
 
+      if (!config.allowPlayerUploads) {
+        return reply
+          .code(403)
+          .send({ error: "заливать свои текстуры нельзя — косметика берётся в магазине" });
+      }
+
       const kind = request.query.kind === "cape" ? "cape" : "skin";
       const model = request.query.model === "slim" ? "slim" : "classic";
 
@@ -359,6 +385,55 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
 
     const fresh = queries.accountById.get(account.id) as AccountRow;
     return libraryOf(fresh, originOf(request));
+  });
+
+  /** Витрина: что продаётся, что уже куплено и сколько монет на руках. */
+  app.get("/me/shop", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const origin = originOf(request);
+    const owned = new Set(queries.purchasesOf.all(account.id).map((row) => row.item_id));
+
+    return {
+      coins: account.coins ?? 0,
+      items: queries.shopItems.all().map((item) => ({
+        id: item.id,
+        kind: item.kind,
+        name: item.name,
+        price: item.price,
+        model: item.model,
+        rarity: item.rarity,
+        url: skinUrl(item.sha1, origin),
+        owned: owned.has(item.id),
+      })),
+    };
+  });
+
+  /** Покупка: списываем монеты и кладём вещь в библиотеку игрока. */
+  app.post<{ Params: { id: string } }>("/me/shop/:id/buy", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const item = queries.shopItem.get(Number(request.params.id));
+    if (!item || !item.visible) return reply.code(404).send({ error: "вещь не найдена" });
+    if (queries.hasPurchase.get(account.id, item.id)) {
+      return reply.code(409).send({ error: "уже куплено" });
+    }
+
+    const coins = account.coins ?? 0;
+    if (coins < item.price) {
+      return reply
+        .code(402)
+        .send({ error: `не хватает ${item.price - coins} G-коинов` });
+    }
+
+    // Списание, запись в историю, покупка и выдача — одной транзакцией:
+    // иначе при сбое посреди можно остаться без монет и без вещи.
+    buy(account.id, item.id, item.price, item.kind, item.sha1, item.model);
+
+    const fresh = queries.accountById.get(account.id) as AccountRow;
+    return { coins: fresh.coins ?? 0, ...libraryOf(fresh, originOf(request)) };
   });
 
   app.post("/me/logout", async (request, reply) => {

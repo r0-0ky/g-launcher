@@ -5,8 +5,10 @@ import { createMode, db, queries, saveMode } from "../db.js";
 import { loaderVersions, minecraftVersions } from "../loaders.js";
 import { buildManifest } from "../manifest.js";
 import * as modrinth from "../modrinth.js";
+import { inspectTexture, putSkin, skinUrl } from "../skins.js";
 import { collectGarbage, storeStream } from "../storage.js";
-import type { ContentKind, ModeInput, ModeRow } from "../types.js";
+import { RARITIES } from "../types.js";
+import type { ContentKind, ModeInput, ModeRow, Rarity } from "../types.js";
 import { isValidModeId, originOf, safeFilename, targetPath } from "../util.js";
 
 const KINDS: ContentKind[] = ["mod", "shader", "resourcepack", "config", "other"];
@@ -38,6 +40,12 @@ function modeToInput(row: ModeRow): ModeInput {
     sortOrder: row.sort_order,
   };
 }
+
+/** Движение монет всегда парой: сам кошелёк и запись в историю. */
+const grant = db.transaction((accountId: string, delta: number, reason: string) => {
+  queries.addCoins.run(delta, accountId);
+  queries.writeLedger.run(accountId, delta, reason);
+});
 
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
   app.post<{ Body: { password?: string } }>("/login", async (request, reply) => {
@@ -374,6 +382,127 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     });
 
     /** Предпросмотр итогового манифеста — включая скрытые сборки. */
+    // --- Магазин и монеты ---
+
+    /** Витрина целиком, включая скрытые позиции. */
+    secured.get("/shop", async (request) => {
+      const origin = originOf(request);
+      return queries.allShopItems.all().map((item) => ({
+        ...item,
+        visible: Boolean(item.visible),
+        url: skinUrl(item.sha1, origin),
+      }));
+    });
+
+    /** Новая позиция: картинка приходит файлом, остальное — полями формы. */
+    secured.post("/shop", async (request, reply) => {
+      let data: Buffer | null = null;
+      const fields: Record<string, string> = {};
+
+      for await (const part of request.parts()) {
+        if (part.type === "file") data = await part.toBuffer();
+        else fields[part.fieldname] = String(part.value);
+      }
+      if (!data) return reply.code(400).send({ error: "не приложен файл" });
+
+      const kind = fields.kind === "cape" ? "cape" : "skin";
+      const shape = inspectTexture(data, kind);
+      if (typeof shape === "string") return reply.code(400).send({ error: shape });
+
+      const name = (fields.name ?? "").trim();
+      if (!name) return reply.code(400).send({ error: "нужно название" });
+
+      const price = Math.max(0, Math.round(Number(fields.price ?? 0)));
+      const sha1 = await putSkin(data);
+
+      queries.addShopItem.run({
+        kind,
+        name,
+        price,
+        sha1,
+        model: fields.model === "slim" ? "slim" : "classic",
+        rarity: RARITIES.includes(fields.rarity as Rarity) ? (fields.rarity as Rarity) : "green",
+        visible: fields.visible === "false" ? 0 : 1,
+        sort_order: Math.round(Number(fields.sortOrder ?? 0)),
+      });
+
+      return { ok: true };
+    });
+
+    secured.put<{
+      Params: { id: string };
+      Body: {
+        name?: string;
+        price?: number;
+        rarity?: Rarity;
+        visible?: boolean;
+        sortOrder?: number;
+      };
+    }>(
+      "/shop/:id",
+      async (request, reply) => {
+        const item = queries.shopItem.get(Number(request.params.id));
+        if (!item) return reply.code(404).send({ error: "вещь не найдена" });
+
+        const rarity = request.body.rarity;
+        queries.updateShopItem.run({
+          id: item.id,
+          name: (request.body.name ?? item.name).trim(),
+          price: Math.max(0, Math.round(request.body.price ?? item.price)),
+          rarity: RARITIES.includes(rarity as Rarity) ? rarity : item.rarity,
+          visible: request.body.visible === undefined ? item.visible : request.body.visible ? 1 : 0,
+          sort_order: Math.round(request.body.sortOrder ?? item.sort_order),
+        });
+        return { ok: true };
+      }
+    );
+
+    /** Убрать с витрины. У тех, кто купил, вещь остаётся в библиотеке. */
+    secured.delete<{ Params: { id: string } }>("/shop/:id", async (request, reply) => {
+      const item = queries.shopItem.get(Number(request.params.id));
+      if (!item) return reply.code(404).send({ error: "вещь не найдена" });
+
+      queries.dropShopItem.run(item.id);
+      return { ok: true };
+    });
+
+    /** Игроки: ники, кошельки, кого забанили. */
+    secured.get("/accounts", async () =>
+      queries.allAccounts.all().map((account) => ({
+        id: account.id,
+        username: account.username,
+        telegramName: account.telegram_name,
+        coins: account.coins ?? 0,
+        banned: Boolean(account.banned),
+        createdAt: account.created_at,
+      }))
+    );
+
+    /** Начисление и списание монет — руками или из будущих достижений. */
+    secured.post<{ Params: { id: string }; Body: { delta?: number; reason?: string } }>(
+      "/accounts/:id/coins",
+      async (request, reply) => {
+        const account = queries.accountById.get(request.params.id);
+        if (!account) return reply.code(404).send({ error: "аккаунт не найден" });
+
+        const delta = Math.round(Number(request.body?.delta ?? 0));
+        if (!delta) return reply.code(400).send({ error: "нужно ненулевое изменение" });
+
+        const reason = (request.body?.reason ?? "вручную из админки").trim();
+        if ((account.coins ?? 0) + delta < 0) {
+          return reply.code(400).send({ error: "у игрока столько нет" });
+        }
+
+        grant(account.id, delta, reason);
+        const fresh = queries.accountById.get(account.id);
+        return { coins: fresh?.coins ?? 0 };
+      }
+    );
+
+    secured.get<{ Params: { id: string } }>("/accounts/:id/ledger", async (request) =>
+      queries.ledgerOf.all(request.params.id)
+    );
+
     secured.get("/manifest/preview", async (request) =>
       buildManifest(originOf(request), true)
     );

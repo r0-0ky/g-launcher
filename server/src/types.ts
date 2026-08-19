@@ -84,6 +84,8 @@ export interface AccountRow {
   /** Активный плащ. Появился позже скина, поэтому может отсутствовать. */
   cape_sha1?: string | null;
   banned: number;
+  /** Кошелёк в G-коинах. */
+  coins?: number;
   created_at: string;
   updated_at: string;
 }
@@ -95,5 +97,25 @@ export interface TextureRow {
   kind: "skin" | "cape";
   sha1: string;
   model: "classic" | "slim";
+  created_at: string;
+}
+
+/** Качество вещи: цвет рамки и порядок редкости. */
+export type Rarity = "green" | "blue" | "purple" | "legendary";
+
+export const RARITIES: Rarity[] = ["green", "blue", "purple", "legendary"];
+
+/** Позиция витрины. */
+export interface ShopItemRow {
+  id: number;
+  kind: "skin" | "cape";
+  name: string;
+  price: number;
+  sha1: string;
+  model: "classic" | "slim";
+  /** Качество: от зелёного к легендарному. */
+  rarity: Rarity;
+  visible: number;
+  sort_order: number;
   created_at: string;
 }
