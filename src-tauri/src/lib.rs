@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod download;
 mod error;
+mod gland;
 mod fabric;
 mod forge;
 mod installer;
@@ -202,7 +203,16 @@ async fn play(
     quickjoin::inject_mod(&app, &paths, &mode)?;
 
     progress.message("Запускаем игру");
-    let (java_path, args) = launch::build_command(&paths, &settings, &mode, &prepared, &account)?;
+    // Аккаунт G Land: игра должна ходить за авторизацией к нам, а не к Mojang.
+    let mut extra_jvm: Vec<String> = Vec::new();
+    if account.kind == AccountKind::GLand {
+        let base = gland::base_from_manifest(&settings.manifest_url)?;
+        let agent = gland::ensure_agent(&state.client, &paths.root).await?;
+        extra_jvm.push(gland::agent_arg(&agent, &base));
+    }
+
+    let (java_path, args) =
+        launch::build_command(&paths, &settings, &mode, &prepared, &account, &extra_jvm)?;
 
     launch::spawn(
         &app,
@@ -230,14 +240,42 @@ async fn play(
 
 /// Достаёт активный аккаунт, попутно обновляя токен Microsoft.
 async fn active_account(state: &State<'_, AppState>) -> Result<Account> {
-    let (account, client_id) = {
+    let (account, client_id, manifest_url) = {
         let store = state.store.lock().await;
         let account = store
             .active()
             .cloned()
             .ok_or_else(|| Error::msg("сначала добавьте аккаунт"))?;
-        (account, store.settings.effective_ms_client_id())
+        (
+            account,
+            store.settings.effective_ms_client_id(),
+            store.settings.manifest_url.clone(),
+        )
     };
+
+    // Токен игры живёт своей жизнью и берётся заново перед каждым запуском:
+    // он короткий, а сессия лаунчера всё равно нужна на месте.
+    if account.kind == AccountKind::GLand {
+        let session = account
+            .session
+            .clone()
+            .ok_or_else(|| Error::msg("войдите в аккаунт G Land заново"))?;
+        let base = gland::base_from_manifest(&manifest_url)?;
+        let fresh = gland::game_token(&state.client, &base, &session).await?;
+
+        let updated = Account {
+            id: account.id.clone(),
+            ..fresh
+        };
+        {
+            let mut store = state.store.lock().await;
+            if let Some(slot) = store.accounts.iter_mut().find(|a| a.id == updated.id) {
+                *slot = updated.clone();
+            }
+        }
+        state.persist().await?;
+        return Ok(updated);
+    }
 
     if account.kind != AccountKind::Microsoft {
         return Ok(account);
@@ -306,6 +344,91 @@ async fn add_offline_account(state: State<'_, AppState>, username: String) -> Re
         let account = Account::offline(&username);
         store.active_account = Some(account.id.clone());
         store.accounts.push(account);
+    }
+    state.persist().await?;
+    get_bootstrap(state).await
+}
+
+/// Вход через наш сервер: игрок подтверждает себя в Telegram.
+#[tauri::command]
+async fn gland_login_start(state: State<'_, AppState>) -> Result<gland::LoginStart> {
+    let base = gland::base_from_manifest(&state.settings().await.manifest_url)?;
+    gland::start_login(&state.client, &base).await
+}
+
+/// Возвращает `null`, пока игрок не нажал кнопку в боте.
+#[tauri::command]
+async fn gland_login_poll(state: State<'_, AppState>, token: String) -> Result<Option<Bootstrap>> {
+    let base = gland::base_from_manifest(&state.settings().await.manifest_url)?;
+    let Some((session, profile)) = gland::poll_login(&state.client, &base, &token).await? else {
+        return Ok(None);
+    };
+
+    {
+        let mut store = state.store.lock().await;
+        // Тот же игрок мог входить раньше — обновляем запись, а не плодим копии.
+        let existing = store
+            .accounts
+            .iter_mut()
+            .find(|a| a.kind == AccountKind::GLand && a.uuid == profile.id);
+
+        let id = match existing {
+            Some(slot) => {
+                slot.session = Some(session.clone());
+                slot.username = profile.username.clone().unwrap_or_default();
+                slot.id.clone()
+            }
+            None => {
+                let account = Account {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    kind: AccountKind::GLand,
+                    username: profile.username.clone().unwrap_or_default(),
+                    uuid: profile.id.clone(),
+                    access_token: String::new(),
+                    refresh_token: None,
+                    expires_at: 0,
+                    xuid: None,
+                    session: Some(session.clone()),
+                };
+                let id = account.id.clone();
+                store.accounts.push(account);
+                id
+            }
+        };
+        store.active_account = Some(id);
+    }
+
+    state.persist().await?;
+    get_bootstrap(state).await.map(Some)
+}
+
+/// Ник меняется на сервере: UUID остаётся прежним, прогресс не теряется.
+#[tauri::command]
+async fn gland_set_nickname(state: State<'_, AppState>, username: String) -> Result<Bootstrap> {
+    let (base, session, id) = {
+        let store = state.store.lock().await;
+        let account = store
+            .active()
+            .filter(|a| a.kind == AccountKind::GLand)
+            .ok_or_else(|| Error::msg("сначала войдите в аккаунт G Land"))?;
+        let session = account
+            .session
+            .clone()
+            .ok_or_else(|| Error::msg("войдите в аккаунт G Land заново"))?;
+        (
+            gland::base_from_manifest(&store.settings.manifest_url)?,
+            session,
+            account.id.clone(),
+        )
+    };
+
+    let profile = gland::set_nickname(&state.client, &base, &session, &username).await?;
+
+    {
+        let mut store = state.store.lock().await;
+        if let Some(slot) = store.accounts.iter_mut().find(|a| a.id == id) {
+            slot.username = profile.username.unwrap_or_default();
+        }
     }
     state.persist().await?;
     get_bootstrap(state).await
@@ -456,6 +579,9 @@ pub fn run() {
             stop_game,
             is_game_running,
             add_offline_account,
+            gland_login_start,
+            gland_login_poll,
+            gland_set_nickname,
             ms_login_start,
             ms_login_poll,
             set_active_account,

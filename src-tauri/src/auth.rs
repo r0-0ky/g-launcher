@@ -297,6 +297,7 @@ async fn complete_login(
         refresh_token,
         expires_at: now + expires_in,
         xuid,
+        session: None,
     })
 }
 

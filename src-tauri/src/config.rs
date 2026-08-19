@@ -74,6 +74,8 @@ impl Settings {
 pub enum AccountKind {
     Offline,
     Microsoft,
+    /// Аккаунт нашего сервера: вход через Telegram, скины и UUID тоже наши.
+    GLand,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,6 +94,10 @@ pub struct Account {
     pub expires_at: u64,
     #[serde(default)]
     pub xuid: Option<String>,
+    /// Сессия лаунчера на нашем сервере — по ней перед запуском берётся
+    /// токен для игры. Только у аккаунтов G Land.
+    #[serde(default)]
+    pub session: Option<String>,
 }
 
 impl Account {
@@ -105,6 +111,7 @@ impl Account {
             refresh_token: None,
             expires_at: 0,
             xuid: None,
+            session: None,
         }
     }
 }

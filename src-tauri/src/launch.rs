@@ -100,6 +100,8 @@ pub fn build_command(
     mode: &Mode,
     prepared: &Prepared,
     account: &Account,
+    // Аргументы JVM от самого лаунчера — идут перед пользовательскими.
+    extra_jvm: &[String],
 ) -> Result<(PathBuf, Vec<String>)> {
     let version = &prepared.version;
     let natives = paths.natives(&version.id);
@@ -127,6 +129,9 @@ pub fn build_command(
 
     let user_type = match account.kind {
         AccountKind::Microsoft => "msa",
+        // Своя авторизация выглядит для игры как старая мояновская: именно
+        // такой тип ждёт authlib-injector.
+        AccountKind::GLand => "mojang",
         AccountKind::Offline => "legacy",
     };
 
@@ -185,6 +190,11 @@ pub fn build_command(
         args.push("-Xdock:name=Minecraft".into());
     }
 
+    // Сначала то, что просит сам лаунчер (например, агент своей авторизации),
+    // потом настройки игрока и режима — так их проще перебить вручную.
+    for extra in extra_jvm {
+        args.push(extra.clone());
+    }
     for extra in settings.jvm_args.split_whitespace() {
         args.push(extra.to_string());
     }

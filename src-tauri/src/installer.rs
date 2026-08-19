@@ -263,7 +263,7 @@ mod tests {
 
         let account = Account::offline("TestPlayer");
         let (java, args) =
-            crate::launch::build_command(&paths, &settings, &mode, &prepared, &account).unwrap();
+            crate::launch::build_command(&paths, &settings, &mode, &prepared, &account, &[]).unwrap();
 
         assert_eq!(java, prepared.java);
         let joined = args.join(" ");
@@ -308,7 +308,7 @@ mod tests {
             .unwrap();
         let account = Account::offline("TestPlayer");
         let (java, args) =
-            crate::launch::build_command(&paths, &settings, &mode, &prepared, &account).unwrap();
+            crate::launch::build_command(&paths, &settings, &mode, &prepared, &account, &[]).unwrap();
 
         println!("$ {} {}", java.display(), args.join(" "));
 

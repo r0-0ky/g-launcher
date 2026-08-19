@@ -51,7 +51,7 @@ export interface Settings {
 
 export interface Account {
   id: string;
-  kind: "offline" | "microsoft";
+  kind: "offline" | "microsoft" | "gland";
   username: string;
   uuid: string;
 }
@@ -106,6 +106,14 @@ export interface DeviceCode {
   expiresIn: number;
 }
 
+export interface GLandLogin {
+  /** Одноразовый код: по нему лаунчер опрашивает сервер. */
+  token: string;
+  /** Ссылка на бота — её открываем в браузере. */
+  url: string;
+  expiresIn: number;
+}
+
 export const api = {
   bootstrap: () => invoke<Bootstrap>("get_bootstrap"),
   saveSettings: (settings: Settings) => invoke<Bootstrap>("save_settings", { settings }),
@@ -116,6 +124,11 @@ export const api = {
   play: (modeId: string, verify = false) => invoke<void>("play", { modeId, verify }),
   stopGame: () => invoke<void>("stop_game"),
   isGameRunning: () => invoke<boolean>("is_game_running"),
+  /** Вход через наш сервер: ссылка на бота, потом опрос до подтверждения. */
+  glandLoginStart: () => invoke<GLandLogin>("gland_login_start"),
+  glandLoginPoll: (token: string) => invoke<Bootstrap | null>("gland_login_poll", { token }),
+  glandSetNickname: (username: string) =>
+    invoke<Bootstrap>("gland_set_nickname", { username }),
   addOfflineAccount: (username: string) =>
     invoke<Bootstrap>("add_offline_account", { username }),
   msLoginStart: () => invoke<DeviceCode>("ms_login_start"),
