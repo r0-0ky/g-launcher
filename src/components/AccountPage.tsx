@@ -39,13 +39,7 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
       setLibrary(null);
       return;
     }
-    api
-      .glandTextures()
-      .then((next) => {
-        setLibrary(next);
-        setModel(next.profile.skinModel);
-      })
-      .catch((err) => setError(errorText(err)));
+    api.glandTextures().then(applyLibrary).catch((err) => setError(errorText(err)));
   }, [signedIn]);
 
   // Опрос входа живёт только пока открыт диалог.
@@ -92,6 +86,16 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
     }
   }
 
+  /**
+   * Библиотека и переключатель рук всегда обновляются вместе: у каждого скина
+   * своя модель, и при выборе другого положение переключателя должно
+   * измениться следом, иначе он показывает руки прошлого скина.
+   */
+  function applyLibrary(next: Library) {
+    setLibrary(next);
+    setModel(next.profile.skinModel);
+  }
+
   /** Заливка: выбираем файл на диске, остальное делает сервер. */
   async function uploadTexture(kind: "skin" | "cape") {
     setError(null);
@@ -101,7 +105,7 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
         filters: [{ name: "Картинка PNG", extensions: ["png"] }],
       });
       if (typeof picked !== "string") return;
-      setLibrary(await api.glandUploadTexture(picked, kind, model));
+      applyLibrary(await api.glandUploadTexture(picked, kind, model));
     } catch (err) {
       setError(errorText(err));
     }
@@ -110,7 +114,7 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
   async function textureAction(action: Promise<Library>) {
     setError(null);
     try {
-      setLibrary(await action);
+      applyLibrary(await action);
     } catch (err) {
       setError(errorText(err));
     }
