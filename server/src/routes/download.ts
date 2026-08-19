@@ -1,7 +1,20 @@
+import { createReadStream, existsSync, statSync } from "node:fs";
+import { resolve } from "node:path";
+
 import type { FastifyInstance } from "fastify";
 
 import { config } from "../config.js";
 import { PIXELIFY_CYRILLIC_BASE64, PIXELIFY_LATIN_BASE64 } from "./fonts.js";
+
+/**
+ * Фон титульного экрана. Файл кладётся руками в DATA_DIR — так его можно
+ * заменить, не пересобирая образ:
+ *
+ *   scp video.mp4 сервер:/srv/g-launcher/data/download-background.mp4
+ *
+ * Нет файла — страница просто останется с градиентом воды.
+ */
+const BACKGROUND = "download-background.mp4";
 
 /**
  * Страница загрузки лаунчера. Данные берутся из последнего релиза на GitHub,
@@ -122,6 +135,39 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
     "pixelify-cyrillic.woff2": PIXELIFY_CYRILLIC_BASE64,
   };
 
+  app.get("/download/background.mp4", async (request, reply) => {
+    const file = resolve(config.dataDir, BACKGROUND);
+    if (!existsSync(file)) {
+      return reply.code(404).send({ error: "фон не загружен" });
+    }
+
+    const info = statSync(file);
+    reply
+      .header("accept-ranges", "bytes")
+      .header("cache-control", "public, max-age=600")
+      .type("video/mp4");
+
+    // Браузеры (особенно Safari) просят видео кусками — без этого фон не поедет.
+    const match = /^bytes=(\d*)-(\d*)$/.exec(request.headers.range ?? "");
+    if (match) {
+      const start = match[1] ? Number(match[1]) : 0;
+      const end = match[2] ? Math.min(Number(match[2]), info.size - 1) : info.size - 1;
+      if (start >= info.size || start > end) {
+        return reply
+          .code(416)
+          .header("content-range", `bytes */${info.size}`)
+          .send({ error: "диапазон за пределами файла" });
+      }
+      return reply
+        .code(206)
+        .header("content-range", `bytes ${start}-${end}/${info.size}`)
+        .header("content-length", end - start + 1)
+        .send(createReadStream(file, { start, end }));
+    }
+
+    return reply.header("content-length", info.size).send(createReadStream(file));
+  });
+
   app.get<{ Params: { name: string } }>("/download/fonts/:name", async (request, reply) => {
     const data = fonts[request.params.name];
     if (!data) return reply.code(404).send({ error: "не найдено" });
@@ -140,8 +186,8 @@ const page = `<!doctype html>
 <title>Gandoni Launcher — скачать</title>
 <meta name="description" content="Лаунчер Minecraft со сборками: моды, шейдеры и обновления ставятся сами." />
 <style>
-  /* Шрифт и палитра те же, что в самом лаунчере (src/styles.css): вода
-     Jellyfish Fields плюс пиксельные панели в духе Minecraft. */
+  /* Титульный экран в духе игрового меню. Шрифт и палитра — те же, что в
+     самом лаунчере (src/styles.css). */
   @font-face {
     font-family: "Pixelify Sans"; font-style: normal; font-weight: 400 700; font-display: block;
     src: url("/download/fonts/pixelify-latin.woff2") format("woff2");
@@ -155,134 +201,139 @@ const page = `<!doctype html>
   :root {
     --water-top: #4ad6ec; --water-mid: #18a8d4; --water-deep: #0d80b6;
     --grass: #93d84e; --grass-deep: #6cb62f;
-    --sand: #f7e3ad; --danger: #b3392a;
+    --danger: #b3392a; --splash: #ffdf3f;
     /* Пиксельная фаска: светлая грань сверху-слева, тёмная снизу-справа. */
     --px: 3px;
     --stone: #c9c9cd; --stone-hover: #dcdce0; --stone-hi: #ffffff; --stone-lo: #7a7a82;
     --panel: #d0d0d3; --panel-ink: #2b2b30; --outline: #3f3f46;
     /* Жёсткая тень-подложка: она и делает элемент выпуклым. */
     --drop: 3px 3px 0 rgba(0, 0, 0, 0.35);
-    --go: #4b9c2e; --go-deep: #3c8527; --go-hi: #63b843;
-    /* Нижняя грань вдавленных поверхностей: белая била бы по глазам на тёмном. */
     --sunk-hi: #8f8f96;
+    --go: #4b9c2e; --go-deep: #3c8527; --go-hi: #63b843;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; }
-  /* Пиксельный шрифт — только на заголовки и кнопки: в нём «5» похожа на «S»,
-     а «ы» и «ш» нарисованы латиницей, поэтому версии и размеры файлов
-     оставляем обычным шрифтом. */
-  h1, h2, h3, a.primary, .num, .section-title, .soon {
+  body {
+    min-height: 100vh; color: #ffffff;
+    font-family: "Chalkboard SE", "Comic Sans MS", "Comic Neue", "Marker Felt", system-ui, sans-serif;
+    /* Пока видео не залито — вода Jellyfish Fields, как раньше. */
+    background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 48%, var(--water-deep) 100%);
+    background-attachment: fixed;
+  }
+  /* Пиксельный шрифт — на заголовки и кнопки: в нём «5» похожа на «S», а «ы»
+     и «ш» нарисованы латиницей, поэтому версии и размеры остаются обычным. */
+  h1, h2, h3, .mc-btn, .logo, .splash, .num, .soon {
     font-family: "Pixelify Sans", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
     font-weight: 400; letter-spacing: 0.4px;
   }
-  body {
-    min-height: 100vh; color: var(--panel-ink);
-    font-family: "Chalkboard SE", "Comic Sans MS", "Comic Neue", "Marker Felt", system-ui, sans-serif;
-    background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 48%, var(--water-deep) 100%);
-    background-attachment: fixed;
-    padding: 40px 16px 0;
-  }
-  /* Лучи света сквозь воду */
-  body::before {
-    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background: repeating-linear-gradient(102deg, rgba(255,255,255,0.07) 0 42px, transparent 42px 150px);
-  }
 
-  /* --- Дно: песок и водоросли --- */
-  .seabed { position: fixed; left: 0; right: 0; bottom: 0; height: 150px; z-index: 0; pointer-events: none; }
-  .sand {
-    position: absolute; left: -10px; right: -10px; bottom: 0; height: 70px;
-    background: var(--sand); box-shadow: inset 0 var(--px) 0 0 #fff3cf, 0 0 0 var(--px) var(--outline);
+  /* --- Фон --- */
+  .bg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+  .bg-dim {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.68));
   }
-  .blade {
-    position: absolute; bottom: 56px; width: 15px;
-    background: linear-gradient(180deg, var(--grass), var(--grass-deep));
-    box-shadow: 0 0 0 var(--px) var(--outline); transform-origin: bottom center;
-    animation: sway 6s ease-in-out infinite;
-  }
-  @keyframes sway {
-    0%, 100% { transform: rotate(-8deg); }
-    50% { transform: rotate(8deg); }
+  /* Лучи света: остаются и поверх видео, и поверх воды. */
+  .bg-dim::after {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(102deg, rgba(255,255,255,0.05) 0 42px, transparent 42px 150px);
   }
 
   /* --- Пузырьки: всплывают и лопаются по клику --- */
-  .bubbles { position: fixed; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
-  .bubble {
-    position: absolute; bottom: -80px; pointer-events: auto; cursor: pointer;
-    animation: rise linear infinite;
-  }
+  .bubbles { position: fixed; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+  .bubble { position: absolute; bottom: -80px; pointer-events: auto; cursor: pointer; animation: rise linear infinite; }
   .bubble .skin {
     display: block; width: 100%; height: 100%; border-radius: 50%;
     background: radial-gradient(circle at 32% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.18) 60%, transparent 72%);
-    border: 1.5px solid rgba(255, 255, 255, 0.65);
-    transition: transform 0.12s ease;
+    border: 1.5px solid rgba(255, 255, 255, 0.65); transition: transform 0.12s ease;
   }
   .bubble:hover .skin { transform: scale(1.12); }
   .bubble.popping { animation-play-state: paused; pointer-events: none; }
   .bubble.popping .skin { animation: pop 0.32s ease-out forwards; }
   @keyframes rise {
     0%   { transform: translateY(0) translateX(0); opacity: 0; }
-    10%  { opacity: 0.9; }
+    10%  { opacity: 0.85; }
     50%  { transform: translateY(-55vh) translateX(20px); }
-    90%  { opacity: 0.75; }
+    90%  { opacity: 0.7; }
     100% { transform: translateY(-115vh) translateX(-16px); opacity: 0; }
   }
-  /* Сначала чуть сжимается, потом разлетается — так клик читается как «лопнул» */
   @keyframes pop {
     0%   { transform: scale(1); opacity: 0.95; }
     35%  { transform: scale(0.8); opacity: 1; border-width: 3px; }
     100% { transform: scale(1.8); opacity: 0; border-width: 1px; }
   }
 
-  /* --- Контент --- */
-  main { position: relative; z-index: 2; max-width: 880px; margin: 0 auto; }
-  /* Каменная панель: фаска вместо скругления и мягкой тени. */
-  .card {
-    background: var(--panel);
+  /* --- Экраны меню --- */
+  .title {
+    position: relative; z-index: 3; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 56px 16px 72px;
+  }
+  .screen { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .screen-title { margin: 0 0 4px; font-size: 26px; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65); }
+
+  .logo-wrap { position: relative; text-align: center; margin-bottom: 18px; }
+  .logo {
+    margin: 0; font-size: clamp(38px, 9vw, 68px); line-height: 0.95; color: #ffffff;
+    text-shadow: 5px 5px 0 rgba(0, 0, 0, 0.6);
+  }
+  .logo .sub { display: block; font-size: 0.52em; color: #d8f4ff; }
+  /* Жёлтая подпись под углом — как в титульном экране игры. */
+  .splash {
+    position: absolute; right: -76px; bottom: 34px; transform: rotate(-16deg);
+    color: var(--splash); font-size: 17px; cursor: pointer; user-select: none;
+    text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55); animation: splash-beat 0.75s ease-in-out infinite alternate;
+  }
+  @keyframes splash-beat { from { transform: rotate(-16deg) scale(1); } to { transform: rotate(-16deg) scale(1.09); } }
+
+  .menu { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 .mc-btn { flex: 1; }
+
+  /* --- Кнопка меню --- */
+  .mc-btn {
+    display: block; width: 100%; padding: 14px 18px; font-size: 17px; text-align: center;
+    text-decoration: none; cursor: pointer; border: none; border-radius: 0;
+    background: var(--stone); color: var(--panel-ink);
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
       0 0 0 var(--px) var(--outline),
       var(--drop);
   }
-  .hero { padding: 30px 28px 26px; text-align: center; }
-  .mark { font-size: 44px; line-height: 1; animation: sway 7s ease-in-out infinite; display: inline-block; }
-  h1 { margin: 6px 0 6px; font-size: 34px; letter-spacing: 0.3px; }
-  .tagline { margin: 0 auto 14px; max-width: 30em; font-size: 15px; line-height: 1.5; color: #4a4a52; }
-  .version {
-    display: inline-block; font-weight: 700; font-size: 13px; margin-bottom: 20px;
-    padding: 5px 14px; background: var(--stone); color: var(--panel-ink);
+  .mc-btn:hover:not(:disabled) { background: var(--stone-hover); }
+  /* Нажатие вдавливает: фаска переворачивается, подложка уходит. */
+  .mc-btn:active:not(:disabled) {
     box-shadow:
-      inset var(--px) var(--px) 0 0 var(--stone-hi),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+      inset var(--px) var(--px) 0 0 rgba(0, 0, 0, 0.25),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 rgba(255, 255, 255, 0.4),
       0 0 0 var(--px) var(--outline);
   }
-  a.primary {
-    display: block; max-width: 420px; margin: 0 auto; text-align: center;
-    text-decoration: none; color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  .mc-btn.go {
     background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
-    padding: 16px 24px; font-size: 19px; font-weight: 700;
+    color: #ffffff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45); font-size: 19px; padding: 16px 18px;
+  }
+  .mc-btn.go:hover { background: linear-gradient(180deg, #79cc53 0 4px, var(--go-hi) 4px, var(--go)); }
+  .mc-btn:disabled { background: #9a9aa0; color: #e2e2e6; cursor: not-allowed; }
+
+  /* --- Панель содержимого --- */
+  .panel {
+    width: 100%; padding: 18px; color: var(--panel-ink); background: var(--panel);
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-      0 0 0 var(--px) var(--outline);
+      0 0 0 var(--px) var(--outline),
+      var(--drop);
   }
-  a.primary:hover { background: linear-gradient(180deg, #79cc53 0 4px, var(--go-hi) 4px, var(--go)); }
-  /* Нажатие вдавливает кнопку: фаска переворачивается. */
-  a.primary:active {
-    box-shadow:
-      inset var(--px) var(--px) 0 0 var(--stone-lo),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
-      0 0 0 var(--px) var(--outline);
-  }
-  /* Вкладки систем: своя открыта сразу, остальные рядом. */
-  .os-tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .panel h3 { margin: 8px 0 6px; font-size: 16px; }
+  .panel p { margin: 0; font-size: 13.5px; line-height: 1.5; color: #4a4a52; }
+
+  /* --- Выбор системы --- */
+  .os-tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
   .os-tab {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
-    min-width: 118px; padding: 12px 14px; font: inherit; cursor: pointer;
-    background: var(--stone); color: var(--panel-ink);
-    border: none; border-radius: 0;
+    min-width: 110px; padding: 10px 12px; font: inherit; cursor: pointer;
+    background: var(--stone); color: var(--panel-ink); border: none; border-radius: 0;
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
@@ -293,183 +344,174 @@ const page = `<!doctype html>
   .os-tab.active {
     background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
     color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
-    /* Выбранная вкладка вдавлена — как нажатая клавиша. */
     box-shadow:
       inset var(--px) var(--px) 0 0 rgba(0, 0, 0, 0.25),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 rgba(255, 255, 255, 0.35),
       0 0 0 var(--px) var(--outline);
   }
   .os-tab:disabled { background: #9a9aa0; color: #e2e2e6; cursor: not-allowed; box-shadow: 0 0 0 var(--px) var(--outline); }
-  .os-ico { width: 30px; height: 30px; fill: currentColor; }
+  .os-ico { width: 28px; height: 28px; fill: currentColor; }
   .os-ico .dim { fill: rgba(0, 0, 0, 0.5); }
-  .os-ico .beak { fill: var(--sand); }
-  .os-name { font-size: 15px; }
+  .os-ico .beak { fill: #f7e3ad; }
+  .os-name { font-size: 14px; }
   .os-count { font-size: 11px; opacity: 0.85; }
-  .picked { margin-top: 10px; font-size: 13px; color: #4a4a52; }
-  .others { margin-top: 20px; border-top: var(--px) solid var(--stone-lo); padding-top: 14px; text-align: left; }
-  .others h2 { font-size: 14px; margin: 0 0 8px; color: #4a4a52; text-align: center; }
-  /* Строки — как слоты инвентаря. */
+  .picked { margin-top: 10px; font-size: 13px; color: #4a4a52; text-align: center; }
+
+  /* Строки файлов — как слоты инвентаря. */
+  .others { margin-top: 18px; border-top: var(--px) solid var(--stone-lo); padding-top: 14px; }
+  .others h3 { font-size: 13px; margin: 0 0 8px; color: #4a4a52; text-align: center; }
   .others a {
-    display: flex; justify-content: space-between; gap: 12px; color: #f2f2f2;
-    text-decoration: none; padding: 9px 12px; font-size: 14px; margin-bottom: 6px;
-    background: #6f6f6f; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    display: flex; justify-content: space-between; gap: 12px; color: #f2f2f2; text-decoration: none;
+    padding: 9px 12px; font-size: 13px; margin-bottom: 6px; background: #6f6f6f;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-lo),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
       0 0 0 var(--px) var(--outline);
   }
-  .others a:hover { background: var(--stone-hover); }
-  .others .size { color: #d9d9d9; white-space: nowrap; }
-  .note { margin: 18px auto 0; max-width: 34em; font-size: 13px; line-height: 1.55; color: #4a4a52; }
-  .error { color: var(--danger); font-weight: 700; }
-  .soon { margin: 0; font-weight: 700; font-size: 15px; color: #3f3f46; }
+  .others a:hover { background: var(--stone-hover); color: var(--panel-ink); text-shadow: none; }
+  .others .size { white-space: nowrap; }
 
-  .section-title {
-    color: #ffffff; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
-    font-size: 22px; text-align: center; margin: 34px 0 14px;
-  }
-  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
-  .feat {
-    background: var(--panel); padding: 16px 18px;
-    box-shadow:
-      inset var(--px) var(--px) 0 0 var(--stone-hi),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-      0 0 0 var(--px) var(--outline),
-      var(--drop);
-  }
-  .feat .ico { font-size: 26px; line-height: 1; }
-  .feat h3 { margin: 8px 0 6px; font-size: 16px; }
-  .feat p { margin: 0; font-size: 13.5px; line-height: 1.5; color: #4a4a52; }
+  .note { margin: 0; font-size: 12.5px; line-height: 1.55; text-align: center; color: #e8f6ff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5); }
+  .error { color: #ffb3a6; font-weight: 700; }
+  .soon { margin: 0; font-size: 15px; text-align: center; color: #3f3f46; }
 
-  .steps { padding: 24px 28px; }
-  .steps h2 { margin: 0 0 16px; font-size: 20px; text-align: center; }
-  .steps ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  /* --- Что внутри / Как начать --- */
+  .feats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .feat .ico { font-size: 24px; line-height: 1; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
   .steps li { display: flex; gap: 14px; align-items: flex-start; }
+  .steps b { display: block; font-size: 15px; }
+  .steps p { margin: 4px 0 0; }
   .num {
-    flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center;
-    font-weight: 700; color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+    flex: 0 0 auto; width: 32px; height: 32px; display: grid; place-items: center; color: #fff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
     background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
       0 0 0 var(--px) var(--outline);
   }
-  .steps p { margin: 5px 0 0; font-size: 14px; line-height: 1.5; }
-  .steps b { display: block; font-size: 15px; }
 
-  footer {
-    position: relative; z-index: 2; max-width: 880px; margin: 26px auto 0;
-    padding-bottom: 190px; text-align: center; color: #ffffff; font-size: 13px;
-    line-height: 1.7; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  /* --- Углы экрана, как в игре --- */
+  .corner {
+    position: fixed; z-index: 3; bottom: 8px; font-size: 12px; color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
   }
-  footer a { color: #fff; }
+  .corner.left { left: 10px; }
+  .corner.right { right: 10px; }
 
   @media (max-width: 560px) {
-    h1 { font-size: 27px; }
-    .hero { padding: 24px 18px 22px; }
+    .splash { right: -8px; bottom: -30px; font-size: 14px; }
+    .title { padding: 40px 12px 64px; }
   }
-  /* Кому анимация мешает — вода замирает, страница остаётся рабочей */
   @media (prefers-reduced-motion: reduce) {
-    .blade, .mark { animation: none; }
     .bubble { display: none; }
+    .splash { animation: none; }
   }
 </style>
 </head>
 <body>
+<video class="bg" id="bg" autoplay muted loop playsinline preload="auto"></video>
+<div class="bg-dim"></div>
 <div class="bubbles" id="bubbles"></div>
-<div class="seabed" aria-hidden="true">
-  <div class="blade" style="left: 4%;  height: 74px;"></div>
-  <div class="blade" style="left: 9%;  height: 46px; animation-delay: -1.5s;"></div>
-  <div class="blade" style="left: 21%; height: 60px; animation-delay: -3s;"></div>
-  <div class="blade" style="left: 44%; height: 40px; animation-delay: -2.2s;"></div>
-  <div class="blade" style="left: 63%; height: 66px; animation-delay: -0.8s;"></div>
-  <div class="blade" style="left: 78%; height: 50px; animation-delay: -3.6s;"></div>
-  <div class="blade" style="left: 92%; height: 80px; animation-delay: -1.1s;"></div>
-  <div class="sand"></div>
-</div>
 
-<main>
-  <section class="card hero">
-    <div class="mark">🍍</div>
-    <h1>Gandoni Launcher</h1>
-    <p class="tagline">
-      Свой лаунчер Minecraft: выбираешь режим — версия игры, модлоадер, моды,
-      шейдеры и Java приезжают сами. Ничего вручную раскладывать по папкам не надо.
-    </p>
-    <div class="version" id="version">загружаем…</div>
-    <div class="os-tabs" id="os-tabs" role="tablist" hidden></div>
-    <div class="os-panel" id="os-panel"></div>
-    <p class="note">
-      Лаунчер обновляется сам: при запуске проверяет новую версию, скачивает,
-      сверяет подпись и ставит в один клик. Возвращаться сюда после каждого
-      обновления не нужно.
-    </p>
+<main class="title">
+  <section class="screen" id="screen-menu">
+    <div class="logo-wrap">
+      <h1 class="logo">Gandoni<span class="sub">Launcher</span></h1>
+      <div class="splash" id="splash" title="Нажми, чтобы сменить"></div>
+    </div>
+    <div class="menu">
+      <button class="mc-btn go" data-go="download">Скачать</button>
+      <button class="mc-btn" data-go="about">Что внутри</button>
+      <button class="mc-btn" data-go="start">Как начать</button>
+      <a class="mc-btn" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
+    </div>
   </section>
 
-  <h2 class="section-title">Что внутри</h2>
-  <div class="grid">
-    <div class="feat">
-      <div class="ico">🎮</div>
-      <h3>Режимы</h3>
-      <p>Список сборок приезжает с сервера. Выбрал режим — лаунчер собрал его целиком и запустил игру.</p>
+  <section class="screen" id="screen-download" hidden>
+    <h2 class="screen-title">Скачать лаунчер</h2>
+    <div class="panel">
+      <div class="os-tabs" id="os-tabs" role="tablist"></div>
+      <div class="os-panel" id="os-panel"></div>
     </div>
-    <div class="feat">
-      <div class="ico">🧩</div>
-      <h3>Все лоадеры</h3>
-      <p>Ванилла, Fabric, Quilt, Forge, NeoForge. Forge ставится по-настоящему — с процессорами установщика, как официальный инсталлятор.</p>
-    </div>
-    <div class="feat">
-      <div class="ico">☕</div>
-      <h3>Java не нужна</h3>
-      <p>Нужную версию лаунчер скачает с серверов Mojang сам. Свой путь тоже можно указать, если он уже есть.</p>
-    </div>
-    <div class="feat">
-      <div class="ico">🔄</div>
-      <h3>Тихие обновления</h3>
-      <p>Сравнение по SHA-1: качается только новое, убранное из сборки стирается, а твои личные файлы не трогаются.</p>
-    </div>
-    <div class="feat">
-      <div class="ico">🔐</div>
-      <h3>Вход как удобно</h3>
-      <p>По лицензии Microsoft или оффлайн по нику — второе пригодится для локальной игры с друзьями.</p>
-    </div>
-    <div class="feat">
-      <div class="ico">🚀</div>
-      <h3>Кнопка в меню игры</h3>
-      <p>Для Fabric- и Quilt-сборок с сервером в главном меню Minecraft появляется кнопка мгновенного захода.</p>
-    </div>
-  </div>
+    <p class="note">
+      Лаунчер обновляется сам: при запуске проверяет новую версию, сверяет
+      подпись и ставит в один клик. Возвращаться сюда не нужно.
+    </p>
+    <button class="mc-btn" data-go="menu">Назад</button>
+  </section>
 
-  <h2 class="section-title">Как начать</h2>
-  <section class="card steps">
-    <ol>
-      <li>
-        <span class="num">1</span>
-        <div><b>Скачай и установи</b><p>Кнопка вверху уже подобрана под твою систему.</p></div>
-      </li>
-      <li>
-        <span class="num">2</span>
-        <div><b>Войди</b><p>По лицензии Microsoft — или просто ником, если играешь оффлайн.</p></div>
-      </li>
-      <li>
-        <span class="num">3</span>
-        <div><b>Выбери режим и жми «Играть»</b><p>Первый запуск дольше — качается сама игра. Дальше только обновления, это быстро.</p></div>
-      </li>
-    </ol>
+  <section class="screen" id="screen-about" hidden>
+    <h2 class="screen-title">Что внутри</h2>
+    <div class="panel">
+      <div class="feats">
+        <div>
+          <div class="ico">🎮</div>
+          <h3>Режимы</h3>
+          <p>Список сборок приезжает с сервера. Выбрал режим — лаунчер собрал его целиком и запустил игру.</p>
+        </div>
+        <div>
+          <div class="ico">🧩</div>
+          <h3>Все лоадеры</h3>
+          <p>Ванилла, Fabric, Quilt, Forge, NeoForge. Forge ставится по-настоящему — с процессорами установщика.</p>
+        </div>
+        <div>
+          <div class="ico">☕</div>
+          <h3>Java не нужна</h3>
+          <p>Нужную версию лаунчер скачает с серверов Mojang сам. Свой путь тоже можно указать.</p>
+        </div>
+        <div>
+          <div class="ico">🔄</div>
+          <h3>Тихие обновления</h3>
+          <p>Качается только новое, убранное из сборки стирается, а твои личные файлы не трогаются.</p>
+        </div>
+        <div>
+          <div class="ico">🔐</div>
+          <h3>Вход как удобно</h3>
+          <p>По лицензии Microsoft или оффлайн по нику — для локальной игры с друзьями.</p>
+        </div>
+        <div>
+          <div class="ico">🚀</div>
+          <h3>Кнопка в меню игры</h3>
+          <p>Для Fabric- и Quilt-сборок с сервером в главном меню Minecraft появляется кнопка мгновенного захода.</p>
+        </div>
+      </div>
+    </div>
+    <button class="mc-btn" data-go="menu">Назад</button>
+  </section>
+
+  <section class="screen" id="screen-start" hidden>
+    <h2 class="screen-title">Как начать</h2>
+    <div class="panel">
+      <ol class="steps">
+        <li>
+          <span class="num">1</span>
+          <div><b>Скачай и установи</b><p>Кнопка «Скачать» уже подбирает файл под твою систему.</p></div>
+        </li>
+        <li>
+          <span class="num">2</span>
+          <div><b>Войди</b><p>По лицензии Microsoft — или просто ником, если играешь оффлайн.</p></div>
+        </li>
+        <li>
+          <span class="num">3</span>
+          <div><b>Выбери режим и жми «Играть»</b><p>Первый запуск дольше — качается сама игра. Дальше только обновления.</p></div>
+        </li>
+      </ol>
+    </div>
+    <button class="mc-btn" data-go="menu">Назад</button>
   </section>
 </main>
 
-<footer>
-  <div><a id="all-releases" href="#" hidden>Все версии и список изменений на GitHub</a></div>
-  <div>Пузырьки лопаются, если по ним щёлкнуть 🫧</div>
-</footer>
+<div class="corner left" id="corner-version">Gandoni Launcher</div>
+<div class="corner right">Не связано с Mojang · пузырьки лопаются 🫧</div>
 
 <script>
   var NAMES = { macos: "macOS", windows: "Windows", linux: "Linux" };
   var ORDER = ["macos", "windows", "linux"];
 
-  /* Иконки нарисованы прямоугольниками по сетке — чтобы совпадать с пиксельным
-     интерфейсом лаунчера. Цвет наследуется от вкладки. */
+  /* Иконки нарисованы прямоугольниками по сетке — под пиксельный интерфейс. */
   var ICONS = {
     macos:
       '<svg class="os-ico" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">' +
@@ -481,8 +523,8 @@ const page = `<!doctype html>
       '<svg class="os-ico" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">' +
       '<rect x="0" y="0" width="4" height="4"/><rect x="5" y="0" width="4" height="4"/>' +
       '<rect x="0" y="5" width="4" height="4"/><rect x="5" y="5" width="4" height="4"/></svg>',
-    // Пингвин: тёмная спина, светлый живот, жёлтые клюв и лапы — иначе
-    // одноцветный силуэт читается как привидение.
+    // Пингвин: тёмная спина, светлый живот, жёлтые клюв и лапы — одноцветный
+    // силуэт читался как привидение.
     linux:
       '<svg class="os-ico" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">' +
       '<rect class="dim" x="3" y="0" width="3" height="1"/><rect class="dim" x="2" y="1" width="5" height="2"/>' +
@@ -495,13 +537,72 @@ const page = `<!doctype html>
       '<rect class="beak" x="1" y="8" width="3" height="1"/><rect class="beak" x="5" y="8" width="3" height="1"/></svg>',
   };
 
-  function plural(n) {
-    var tail = n % 100 > 4 && n % 100 < 21 ? 0 : n % 10;
-    if (tail === 1) return n + " файл";
-    if (tail > 1 && tail < 5) return n + " файла";
-    return n + " файлов";
+  /* --- Экраны меню --- */
+  var SCREENS = ["menu", "download", "about", "start"];
+
+  function show(name, keepHash) {
+    SCREENS.forEach(function (id) {
+      document.getElementById("screen-" + id).hidden = id !== name;
+    });
+    window.scrollTo(0, 0);
+    // Экран остаётся в адресе: ссылкой можно вести сразу на загрузки,
+    // а «назад» в браузере работает как кнопка «Назад» в меню.
+    if (!keepHash) location.hash = name === "menu" ? "" : name;
   }
 
+  function fromHash() {
+    var name = location.hash.replace("#", "");
+    show(SCREENS.indexOf(name) >= 0 ? name : "menu", true);
+  }
+
+  window.addEventListener("hashchange", fromHash);
+  fromHash();
+
+  document.addEventListener("click", function (event) {
+    var target = event.target.closest("[data-go]");
+    if (target) show(target.dataset.go);
+  });
+
+  // Esc возвращает в меню — как в игре.
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") show("menu");
+  });
+
+  /* --- Жёлтая подпись --- */
+  var SPLASHES = [
+    "Моды ставятся сами!",
+    "Java не нужна!",
+    "Сверяет файлы по SHA-1!",
+    "Forge ставится по-настоящему!",
+    "Пузырьки лопаются!",
+    "Обновляется сам!",
+    "Сделано в Бикини Боттом!",
+    "Осторожно, медузы!",
+    "Пять модлоадеров!",
+    "Не связано с Mojang!",
+    "Работает и оффлайн!",
+    "Твои файлы не трогает!",
+    "Кнопка захода в меню игры!",
+    "Шейдеры тоже приезжают!",
+    "Первый запуск дольше, потерпи",
+  ];
+
+  var splash = document.getElementById("splash");
+  function roll() {
+    var next = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+    splash.textContent = next === splash.textContent ? SPLASHES[0] : next;
+  }
+  splash.addEventListener("click", roll);
+  roll();
+
+  /* --- Фон-видео. Нет файла — остаётся вода. --- */
+  (function () {
+    var video = document.getElementById("bg");
+    video.addEventListener("error", function () { video.remove(); });
+    video.src = "/download/background.mp4";
+  })();
+
+  /* --- Данные релиза --- */
   function detect() {
     var ua = navigator.userAgent;
     if (/Mac/i.test(ua)) return "macos";
@@ -514,6 +615,13 @@ const page = `<!doctype html>
     var value = bytes, unit = 0;
     while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
     return (unit === 0 ? value : value.toFixed(1)) + " " + units[unit];
+  }
+
+  function plural(n) {
+    var tail = n % 100 > 4 && n % 100 < 21 ? 0 : n % 10;
+    if (tail === 1) return n + " файл";
+    if (tail > 1 && tail < 5) return n + " файла";
+    return n + " файлов";
   }
 
   function link(asset) {
@@ -532,27 +640,19 @@ const page = `<!doctype html>
   fetch("/download/release.json")
     .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("недоступно")); })
     .then(function (release) {
-      var label = "версия " + release.version;
-      if (release.publishedAt) {
-        label += " · " + new Date(release.publishedAt).toLocaleDateString("ru-RU", {
-          day: "numeric", month: "long", year: "numeric"
-        });
-      }
-      document.getElementById("version").textContent = label;
-
-      if (release.repo) {
-        var all = document.getElementById("all-releases");
-        all.href = "https://github.com/" + release.repo + "/releases";
-        all.hidden = false;
-      }
-
+      var corner = document.getElementById("corner-version");
       var tabs = document.getElementById("os-tabs");
       var panel = document.getElementById("os-panel");
+
+      if (release.repo) {
+        document.getElementById("all-releases").href =
+          "https://github.com/" + release.repo + "/releases";
+      }
 
       // Релизов ещё не выпускали — это нормальное состояние, а не ошибка.
       var total = ORDER.reduce(function (n, os) { return n + release.assets[os].length; }, 0);
       if (!release.version || !total) {
-        document.getElementById("version").textContent = "первый релиз ещё готовится";
+        corner.textContent = "Gandoni Launcher · релиз готовится";
         var soon = document.createElement("p");
         soon.className = "soon";
         soon.textContent = "Сборки появятся здесь сразу после выпуска — страница подтянет их сама.";
@@ -560,15 +660,20 @@ const page = `<!doctype html>
         return;
       }
 
-      // Открытой оказывается вкладка системы посетителя. Если под неё сборок
-      // в релизе нет — открываем первую непустую, чтобы страница не выглядела
-      // сломанной.
+      corner.textContent = "Gandoni Launcher " + release.version;
+      if (release.publishedAt) {
+        corner.textContent += " · " + new Date(release.publishedAt).toLocaleDateString("ru-RU", {
+          day: "numeric", month: "long", year: "numeric"
+        });
+      }
+
+      // Открытой оказывается вкладка системы посетителя. Нет под неё сборок —
+      // открываем первую непустую, чтобы экран не выглядел сломанным.
       var mine = detect();
       if (!release.assets[mine].length) {
         mine = ORDER.filter(function (os) { return release.assets[os].length; })[0];
       }
 
-      tabs.hidden = false;
       ORDER.forEach(function (os) {
         var files = release.assets[os];
         var tab = document.createElement("button");
@@ -608,7 +713,7 @@ const page = `<!doctype html>
         // Первый файл — рекомендованный: под macOS это .dmg, под Windows .exe.
         var best = files[0];
         var main = document.createElement("a");
-        main.className = "primary";
+        main.className = "mc-btn go";
         main.href = best.url;
         main.textContent = "Скачать для " + NAMES[os];
         panel.appendChild(main);
@@ -621,7 +726,7 @@ const page = `<!doctype html>
         if (files.length > 1) {
           var more = document.createElement("div");
           more.className = "others";
-          var title = document.createElement("h2");
+          var title = document.createElement("h3");
           title.textContent = "Другие форматы для " + NAMES[os];
           more.appendChild(title);
           files.slice(1).forEach(function (asset) { more.appendChild(link(asset)); });
@@ -632,9 +737,13 @@ const page = `<!doctype html>
       select(mine);
     })
     .catch(function () {
-      var box = document.getElementById("version");
-      box.textContent = "Не удалось получить список загрузок. Попробуйте позже.";
-      box.className = "version error";
+      document.getElementById("corner-version").innerHTML =
+        "<span class='error'>Список загрузок недоступен</span>";
+      var panel = document.getElementById("os-panel");
+      var warn = document.createElement("p");
+      warn.className = "soon";
+      warn.textContent = "Не удалось получить список загрузок. Попробуйте позже.";
+      panel.appendChild(warn);
     });
 
   /* --- Пузырьки --- */
@@ -642,7 +751,7 @@ const page = `<!doctype html>
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     var layer = document.getElementById("bubbles");
-    var COUNT = 22;
+    var COUNT = 18;
 
     function spawn(atStart) {
       var box = document.createElement("div");
@@ -651,17 +760,16 @@ const page = `<!doctype html>
       box.style.left = Math.random() * 98 + "%";
       box.style.width = d + "px";
       box.style.height = d + "px";
-      // Крупные всплывают медленнее — так вода выглядит живой, а не как дождь наоборот.
+      // Крупные всплывают медленнее — так вода выглядит живой.
       var duration = 9 + (d / 56) * 8 + Math.random() * 4;
       box.style.animationDuration = duration + "s";
-      // При загрузке раскидываем пузырьки по всей высоте, чтобы не стартовать с пустого экрана.
+      // При загрузке раскидываем по всей высоте, чтобы не стартовать с пустого экрана.
       if (atStart) box.style.animationDelay = "-" + (Math.random() * duration) + "s";
 
       var skin = document.createElement("span");
       skin.className = "skin";
       box.appendChild(skin);
 
-      // Долетел до поверхности — исчез, вместо него пойдёт новый.
       box.addEventListener("animationend", function (event) {
         if (event.animationName !== "rise") return;
         box.remove();
