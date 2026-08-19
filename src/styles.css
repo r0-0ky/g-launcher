@@ -1455,3 +1455,94 @@ input:focus {
     inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
     0 0 0 var(--px) #ffffff;
 }
+
+/* --- Объёмный предпросмотр скина --- */
+
+.skin-preview {
+  /* Тот же вдавленный слот, что и у остальных текстур — модель стоит в нише. */
+  display: block;
+  background: linear-gradient(180deg, #2b2b30, #3f3f46);
+  cursor: grab;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
+    0 0 0 var(--px) var(--outline);
+}
+
+.skin-preview:active {
+  cursor: grabbing;
+}
+
+/* --- Страница аккаунта --- */
+
+.account-page {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.account-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.account-head h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.account-columns {
+  display: grid;
+  /* Слева всё управление, справа — модель; она шире не становится. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.account-main,
+.account-side {
+  background: var(--panel);
+  color: var(--panel-ink);
+  padding: 16px 18px;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-hi),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+    0 0 0 var(--px) var(--outline),
+    var(--drop);
+}
+
+.account-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.account-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  /* Модель остаётся на виду, пока листаешь список слева. */
+  position: sticky;
+  top: 0;
+}
+
+/* Узкое окно: модель уезжает наверх, колонки складываются. */
+@media (max-width: 900px) {
+  .account-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .account-side {
+    order: -1;
+    position: static;
+  }
+}

@@ -12,7 +12,7 @@ import { Sidebar } from "./components/Sidebar";
 import { ModeView } from "./components/ModeView";
 import { Console } from "./components/Console";
 import { SettingsDialog } from "./components/SettingsDialog";
-import { AccountDialog } from "./components/AccountDialog";
+import { AccountPage } from "./components/AccountPage";
 import { Bubbles, Snail, Sponge, Starfish, Jellyfish } from "./components/decor";
 import { Intro } from "./components/Intro";
 import { UpdateBanner } from "./components/UpdateBanner";
@@ -271,7 +271,14 @@ export default function App() {
           </div>
         )}
 
-        {selected ? (
+        {showAccounts && bootstrap ? (
+          <AccountPage
+            accounts={bootstrap.accounts}
+            activeId={bootstrap.activeAccount}
+            onClose={() => setShowAccounts(false)}
+            onChanged={(next) => setBootstrap(next)}
+          />
+        ) : selected ? (
           <ModeView
             mode={selected}
             report={reports[selected.id] ?? null}
@@ -320,15 +327,6 @@ export default function App() {
             setShowSettings(false);
             void loadManifest(true);
           }}
-        />
-      )}
-
-      {showAccounts && bootstrap && (
-        <AccountDialog
-          accounts={bootstrap.accounts}
-          activeId={bootstrap.activeAccount}
-          onClose={() => setShowAccounts(false)}
-          onChanged={(next) => setBootstrap(next)}
         />
       )}
 

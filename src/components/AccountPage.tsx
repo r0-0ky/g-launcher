@@ -5,6 +5,7 @@ import type { Account, Bootstrap, Library } from "../api";
 import { api, errorText } from "../api";
 import { Button } from "./McButton";
 import { Close } from "./icons";
+import { SkinPreview } from "./SkinPreview";
 
 interface Props {
   accounts: Account[];
@@ -13,7 +14,7 @@ interface Props {
   onChanged: (bootstrap: Bootstrap) => void;
 }
 
-export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props) {
+export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
   // Вошёл — кнопку входа не показываем. Чтобы войти заново (например, если
   // сессия протухла), аккаунт достаточно удалить из списка.
   const signedIn = accounts.some((account) => account.kind === "gland");
@@ -27,6 +28,8 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
   const [glandWaiting, setGlandWaiting] = useState(false);
   const [glandNick, setGlandNick] = useState("");
   const [library, setLibrary] = useState<Library | null>(null);
+  const activeSkin = library?.skins.find((texture) => texture.active) ?? null;
+  const activeCape = library?.capes.find((texture) => texture.active) ?? null;
   const [model, setModel] = useState<"classic" | "slim">("classic");
   const pollRef = useRef<number | null>(null);
 
@@ -119,9 +122,16 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
-        <h2>Аккаунты</h2>
+    <section className="account-page">
+      <header className="account-head">
+        <h2>Аккаунт</h2>
+        <Button variant="secondary" onClick={onClose}>
+          Назад
+        </Button>
+      </header>
+
+      <div className="account-columns">
+        <div className="account-main">
 
         <div className="account-list">
           {accounts.length === 0 && <div className="muted">Пока нет ни одного аккаунта</div>}
@@ -170,8 +180,6 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
 
         {library && (
           <>
-            <div className="divider" />
-
             <div className="field">
               <span>Скин</span>
               <div className="texture-grid">
@@ -216,7 +224,7 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
                 </label>
                 {library.profile.hasSkin && (
                   <Button
-                    variant="clear"
+                    variant="secondary"
                     onClick={() => textureAction(api.glandClearTexture("skin"))}
                   >
                     Снять
@@ -256,7 +264,7 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
                 </Button>
                 {library.profile.hasCape && (
                   <Button
-                    variant="clear"
+                    variant="secondary"
                     onClick={() => textureAction(api.glandClearTexture("cape"))}
                   >
                     Снять
@@ -286,15 +294,20 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
           </label>
         )}
 
-        {error && <div className="error">{error}</div>}
-
-        <div className="modal-actions">
-          <div className="spacer" />
-          <Button variant="secondary" onClick={onClose}>
-            Закрыть
-          </Button>
+          {error && <div className="error">{error}</div>}
         </div>
+
+        <aside className="account-side">
+          <SkinPreview
+            skin={activeSkin?.url ?? null}
+            cape={activeCape?.url ?? null}
+            model={activeSkin?.model ?? "classic"}
+            width={260}
+            height={380}
+          />
+          <div className="muted">Покрутите мышью</div>
+        </aside>
       </div>
-    </div>
+    </section>
   );
 }
