@@ -172,7 +172,7 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .send(createReadStream(file));
   });
 
-  app.get<{ Params: { name: string } }>("/download/:name(logo|bubble|favicon|favicon-180).png", async (request, reply) => {
+  app.get<{ Params: { name: string } }>("/download/:name(bubble|favicon|favicon-180).png", async (request, reply) => {
     const file = assetPath(request.params.name + ".png");
     if (!file) return reply.code(404).send({ error: "не найдено" });
 
@@ -185,6 +185,22 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .header("cache-control", "public, max-age=86400")
       .header("content-length", info.size)
       .type("image/png")
+      .send(createReadStream(file));
+  });
+
+  app.get("/download/logo.webp", async (request, reply) => {
+    const file = assetPath("logo.webp");
+    if (!file) return reply.code(404).send({ error: "не найдено" });
+
+    const info = statSync(file);
+    const etag = tagOf(info);
+    if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+
+    return reply
+      .header("etag", etag)
+      .header("cache-control", "public, max-age=86400")
+      .header("content-length", info.size)
+      .type("image/webp")
       .send(createReadStream(file));
   });
 
@@ -257,8 +273,10 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       sendRanged(request, reply, "download-" + request.params.name + ".mp4", "video/mp4")
   );
 
-  app.get("/download/secret-theme.mp3", async (request, reply) =>
-    sendRanged(request, reply, "secret-theme.mp3", "audio/mpeg")
+  app.get<{ Params: { name: string } }>(
+    "/download/:name(secret-theme|pop).mp3",
+    async (request, reply) =>
+      sendRanged(request, reply, request.params.name + ".mp3", "audio/mpeg")
   );
 
   app.get<{ Params: { name: string } }>("/download/fonts/:name", async (request, reply) => {
@@ -366,7 +384,7 @@ const page = `<!doctype html>
   .title {
     /* svh — высота без адресной строки: на мобильных 100vh уезжает под неё. */
     position: relative; z-index: 3; min-height: 100vh; min-height: 100svh;
-    display: flex; align-items: center; justify-content: center; padding: 56px 16px 72px;
+    display: flex; align-items: center; justify-content: center; padding: 32px 16px 72px;
     /* Контейнер занимает весь экран и перехватывал бы клики по пузырькам —
        нажатия ловят только сами экраны меню. */
     pointer-events: none;
@@ -377,7 +395,8 @@ const page = `<!doctype html>
   .screen-title { margin: 0 0 4px; font-size: 26px; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65); }
 
   /* Логотип по центру, подпись цепляется к его правому нижнему углу. */
-  .logo-wrap { position: relative; display: inline-block; margin-bottom: 6px; }
+  /* Композиция картинки смещена влево, поэтому подвигаем блок вправо. */
+  .logo-wrap { position: relative; display: inline-block; margin-bottom: 20px; transform: translateX(20px); }
   .logo {
     display: block;
     width: min(540px, 88vw);
@@ -500,10 +519,10 @@ const page = `<!doctype html>
   .corner.right { right: 10px; }
 
   @media (max-width: 560px) {
-    .title { padding: 28px 10px 52px; }
+    .title { padding: 16px 10px 52px; }
     .logo { width: 86vw; }
     .splash { right: -4px; bottom: -18px; font-size: 12px; max-width: 108px; }
-    .logo-wrap { margin-bottom: 12px; }
+    .logo-wrap { margin-bottom: 26px; }
     .screen { gap: 10px; }
     .screen-title { font-size: 20px; }
     .Button { padding: 12px 12px; font-size: 15px; }
@@ -539,7 +558,7 @@ const page = `<!doctype html>
 <main class="title">
   <section class="screen" id="screen-menu">
     <div class="logo-wrap">
-      <img class="logo" src="/download/logo.png" alt="G LAND" />
+      <img class="logo" src="/download/logo.webp" alt="G LAND" />
       <div class="splash" id="splash" title="Нажми, чтобы сменить"></div>
     </div>
     <div class="menu">
@@ -940,6 +959,25 @@ const page = `<!doctype html>
       panel.appendChild(warn);
     });
 
+  /* Щелчок лопающегося пузыря. Держим несколько копий и играем их по кругу:
+     одному элементу пришлось бы обрываться на полузвуке, если лопать часто. */
+  var popSounds = [];
+  var popNext = 0;
+
+  function playPop() {
+    if (!popSounds.length) {
+      for (var i = 0; i < 5; i += 1) {
+        var sound = new Audio("/download/pop.mp3");
+        sound.volume = 0.45;
+        popSounds.push(sound);
+      }
+    }
+    var current = popSounds[popNext];
+    popNext = (popNext + 1) % popSounds.length;
+    current.currentTime = 0;
+    current.play().catch(function () { undefined; });
+  }
+
   /* --- Пузырьки --- */
   (function () {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -971,6 +1009,7 @@ const page = `<!doctype html>
 
       box.addEventListener("pointerdown", function () {
         box.classList.add("popping");
+        playPop();
         setTimeout(function () { box.remove(); spawn(false); }, 320);
       });
 
