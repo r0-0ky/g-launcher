@@ -1820,15 +1820,21 @@ img.avatar {
   justify-content: flex-end;
 }
 
-/* Плита под ногами: без неё модель висит в пустоте. */
-.shop-detail-stage::before {
+/* Плита под ногами: без неё модель висит в пустоте. Размеры в долях холста —
+   ступни у модели всегда примерно на девяти десятых его высоты. */
+.shop-stage {
+  position: relative;
+  line-height: 0;
+}
+
+.shop-stage::before {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: 54px;
-  width: 230px;
-  height: 58px;
-  transform: translateX(-50%);
+  top: 91%;
+  width: 66%;
+  height: 13%;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: radial-gradient(
     ellipse at 50% 35%,

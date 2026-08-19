@@ -103,6 +103,7 @@ export function ShopPage({ onBought }: Props) {
 
           {/* Модель стоит на плите — иначе кажется, что она висит в воздухе. */}
           <div className="shop-detail-stage">
+            <div className="shop-stage">
             <SkinPreview
               skin={shown.kind === "cape" ? (shop?.wearing?.skin ?? null) : shown.url}
               cape={shown.kind === "cape" ? shown.url : null}
@@ -112,6 +113,7 @@ export function ShopPage({ onBought }: Props) {
               pose
               angle={shown.kind === "cape" ? 2.4 : -0.5}
             />
+            </div>
             <div className="shop-stage-hint muted small">Покрутите мышью</div>
           </div>
         </div>
