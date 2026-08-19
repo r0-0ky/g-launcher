@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { LogEvent } from "../api";
+import { Button } from "./McButton";
 
 interface Props {
   lines: LogEvent[];
@@ -18,13 +19,13 @@ export function Console({ lines, open, onToggle, onClear }: Props) {
   return (
     <div className={`console${open ? " open" : ""}`}>
       <div className="console-head">
-        <button className="link-button" onClick={onToggle}>
+        <Button variant="clear" onClick={onToggle}>
           {open ? "▾" : "▸"} Консоль игры {lines.length > 0 && `(${lines.length})`}
-        </button>
+        </Button>
         {open && (
-          <button className="link-button" onClick={onClear}>
+          <Button variant="clear" onClick={onClear}>
             Очистить
-          </button>
+          </Button>
         )}
       </div>
       {open && (

@@ -5,6 +5,17 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  resolve: {
+    alias: [
+      // В сборке minecraft-react-ui tslib подключён относительным путём внутрь
+      // node_modules — так пакет не собирается ничем. Отправляем импорт в
+      // настоящий tslib.
+      {
+        find: /^(\.\.\/)+node_modules\/tslib\/tslib\.es6\.js$/,
+        replacement: "tslib",
+      },
+    ],
+  },
   server: {
     port: 1420,
     strictPort: true,

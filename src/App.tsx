@@ -18,6 +18,7 @@ import { Intro } from "./components/Intro";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { useSelfUpdate } from "./selfUpdate";
 import themeAudio from "./assets/theme.mp3";
+import { Button } from "./components/McButton";
 
 const MAX_LOG_LINES = 800;
 
@@ -260,9 +261,9 @@ export default function App() {
         {error && (
           <div className="error banner">
             <span>{error}</span>
-            <button className="link-button" onClick={() => setError(null)}>
+            <Button variant="clear" onClick={() => setError(null)}>
               ✕
-            </button>
+            </Button>
           </div>
         )}
 
@@ -291,9 +292,9 @@ export default function App() {
             <p>
               Проверьте адрес манифеста в настройках и нажмите «Обновить» в списке слева.
             </p>
-            <button className="ghost-button" onClick={() => setShowSettings(true)}>
+            <Button variant="secondary" onClick={() => setShowSettings(true)}>
               Открыть настройки
-            </button>
+            </Button>
           </div>
         )}
 

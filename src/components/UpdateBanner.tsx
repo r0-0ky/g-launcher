@@ -1,4 +1,5 @@
 import type { SelfUpdateState } from "../selfUpdate";
+import { Button } from "./McButton";
 
 /** Плашка «вышла новая версия лаунчера» поверх контента. */
 export function UpdateBanner({ update }: { update: SelfUpdateState }) {
@@ -31,12 +32,12 @@ export function UpdateBanner({ update }: { update: SelfUpdateState }) {
 
       {!busy && (
         <div className="update-banner-actions">
-          <button className="play-button small" onClick={update.install}>
+          <Button variant="primary" className="small" onClick={update.install}>
             {update.stage === "failed" ? "Ещё раз" : "Обновить"}
-          </button>
-          <button className="ghost-button" onClick={update.dismiss}>
+          </Button>
+          <Button variant="secondary" onClick={update.dismiss}>
             Позже
-          </button>
+          </Button>
         </div>
       )}
     </div>

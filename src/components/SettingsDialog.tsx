@@ -2,6 +2,7 @@ import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { Settings } from "../api";
 import { api, errorText } from "../api";
+import { Button } from "./McButton";
 
 interface Props {
   settings: Settings;
@@ -64,9 +65,9 @@ export function SettingsDialog({ settings, gameRoot, onClose, onSaved }: Props) 
               onChange={(event) => patch({ rootDir: event.target.value || null })}
               placeholder={gameRoot}
             />
-            <button className="ghost-button" onClick={() => pickFolder("root")}>
+            <Button variant="secondary" onClick={() => pickFolder("root")}>
               Выбрать
-            </button>
+            </Button>
           </div>
         </label>
 
@@ -91,9 +92,9 @@ export function SettingsDialog({ settings, gameRoot, onClose, onSaved }: Props) 
               onChange={(event) => patch({ javaPath: event.target.value || null })}
               placeholder="Оставьте пустым — лаунчер скачает нужную версию сам"
             />
-            <button className="ghost-button" onClick={() => pickFolder("java")}>
+            <Button variant="secondary" onClick={() => pickFolder("java")}>
               Выбрать
-            </button>
+            </Button>
           </div>
         </label>
 
@@ -149,16 +150,16 @@ export function SettingsDialog({ settings, gameRoot, onClose, onSaved }: Props) 
         {error && <div className="error">{error}</div>}
 
         <div className="modal-actions">
-          <button className="ghost-button" onClick={() => api.openGameRoot()}>
+          <Button variant="secondary" onClick={() => api.openGameRoot()}>
             Открыть папку игры
-          </button>
+          </Button>
           <div className="spacer" />
-          <button className="ghost-button" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Отмена
-          </button>
-          <button className="play-button small" onClick={save} disabled={saving}>
+          </Button>
+          <Button variant="primary" className="small" onClick={save} disabled={saving}>
             {saving ? "Сохраняем…" : "Сохранить"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

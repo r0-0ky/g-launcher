@@ -621,65 +621,6 @@ input:focus {
   align-items: center;
 }
 
-.play-button {
-  background: linear-gradient(180deg, var(--sunny), var(--sunny-deep));
-  color: var(--ink);
-  font-weight: 900;
-  font-size: 17px;
-  border: 4px solid var(--ink);
-  border-radius: 16px;
-  padding: 14px 34px;
-  box-shadow: 3px 4px 0 rgba(10, 40, 60, 0.35);
-  transition: transform 0.12s ease;
-}
-
-.play-button.small {
-  padding: 10px 20px;
-  font-size: 14px;
-}
-
-.play-button:not(:disabled):hover {
-  transform: scale(1.06) rotate(-1.5deg);
-}
-
-.play-button:not(:disabled):active {
-  transform: scale(0.97);
-}
-
-.ghost-button {
-  background: var(--paper);
-  border: 3px solid var(--ink);
-  color: var(--ink);
-  border-radius: 14px;
-  padding: 11px 17px;
-  font-weight: 800;
-  box-shadow: 2px 3px 0 rgba(10, 40, 60, 0.28);
-  transition: transform 0.12s ease;
-}
-
-.ghost-button:not(:disabled):hover {
-  transform: translateY(-2px) rotate(-1deg);
-}
-
-.ghost-button.danger,
-.link-button.danger {
-  color: var(--danger-deep);
-  border-color: var(--danger-deep);
-}
-
-.link-button {
-  background: none;
-  border: none;
-  color: #eafaff;
-  padding: 2px 4px;
-  font-weight: 700;
-}
-
-.link-button:hover {
-  color: #fff;
-  text-decoration: underline wavy;
-}
-
 .muted {
   color: #6a7a86;
 }
@@ -915,8 +856,7 @@ input:focus {
   align-items: center;
 }
 
-.row .ghost-button,
-.row .play-button {
+.row .Button {
   white-space: nowrap;
 }
 
@@ -1024,9 +964,10 @@ input:focus {
    скруглений, каменные панели, слоты, шрифт Pixelify Sans. Раскладка и
    размеры остаются выше — здесь только поверхность.
 
-   Библиотеку minecraft-react-ui подключить не вышло: её npm-пакет
-   опубликован пустым (нет папки build), а у репозитория нет лицензии,
-   поэтому исходники брать нельзя. Внешний вид воспроизведён самостоятельно.
+   Кнопки — настоящий компонент Button из minecraft-react-ui (MIT), версия
+   0.6.0: в 0.7.0 автор выложил пустой пакет. Кроме Button в опубликованных
+   сборках ничего нет — у остальных компонентов лежат только .d.ts, поэтому
+   панели, поля и списки остаются нашими.
 
    Фон Jellyfish Fields, пузырьки, маскоты и заставка намеренно оставлены —
    это гибрид, а не смена темы.
@@ -1035,29 +976,21 @@ input:focus {
 /* Пиксельный шрифт идёт на заголовки и кнопки. В основной текст — намеренно
    нет: в нём «5» легко спутать с «S», а «ы» и «ш» нарисованы латиницей, и
    версии сборок вроде 1.20.1 читаются плохо. Числа и мелкий текст остаются
-   прежним шрифтом. */
-h1,
+   прежним шрифтом. */h1,
 h2,
 .brand-title,
 .mode-item-name,
 .account-name,
 .status-summary strong,
-.play-button,
-.ghost-button,
 .icon-button,
 .music-toggle,
-.link-button,
 .intro-skip {
   font-family: "Pixelify Sans", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
   font-weight: 400;
   letter-spacing: 0.4px;
 }
 
-/* --- Выпуклые поверхности: всё, на что можно нажать --- */
-
-.play-button,
-.ghost-button,
-.icon-button,
+/* --- Выпуклые поверхности: всё, на что можно нажать --- */.icon-button,
 .music-toggle,
 .account-button,
 .chip,
@@ -1141,9 +1074,7 @@ button {
   letter-spacing: 0.2px;
 }
 
-/* Второстепенные кнопки: светлый камень, тёмная надпись. */
-.ghost-button,
-.icon-button,
+/* Второстепенные кнопки: светлый камень, тёмная надпись. */.icon-button,
 .music-toggle,
 .account-button,
 .chip,
@@ -1153,7 +1084,6 @@ button {
   text-shadow: none;
 }
 
-.ghost-button:not(:disabled):hover,
 .icon-button:hover,
 .music-toggle:hover,
 .account-button:hover {
@@ -1162,50 +1092,13 @@ button {
   transform: none;
 }
 
-/* Нажатие вдавливает: фаска переворачивается, подложка уходит. */
-.ghost-button:not(:disabled):active,
-.icon-button:active,
-.music-toggle:active,
-.play-button:not(:disabled):active {
+/* Нажатие вдавливает: фаска переворачивается, подложка уходит. */.icon-button:active,
+.music-toggle:active {
   transform: none;
   box-shadow:
     inset var(--px) var(--px) 0 0 rgba(0, 0, 0, 0.25),
     inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 rgba(255, 255, 255, 0.4),
     0 0 0 var(--px) var(--outline);
-}
-
-.ghost-button:disabled,
-.play-button:disabled {
-  background: #9a9aa0;
-  color: #d8d8dc;
-  text-shadow: none;
-}
-
-.play-button {
-  background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
-  color: #ffffff;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
-  font-size: 16px;
-}
-
-.play-button:not(:disabled):hover {
-  background: linear-gradient(180deg, #79cc53 0 4px, var(--go-hi) 4px, var(--go));
-  transform: none;
-}
-
-.ghost-button.danger {
-  background: #b3392a;
-  color: #ffe8e2;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
-}
-
-.link-button {
-  color: #d8f4ff;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
-}
-
-.link-button:hover {
-  text-decoration: underline;
 }
 
 .music-toggle {
@@ -1426,4 +1319,46 @@ input:focus {
 
 ::-webkit-scrollbar-track {
   background: rgba(20, 20, 26, 0.5);
+}
+
+/* --- Кнопки из minecraft-react-ui --- */
+
+.Button {
+  /* Шрифт Minecraft с библиотекой не поставляется — без этого браузер
+     уходит в засечки. */
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  box-shadow:
+    inset 0 -2px 0 0 var(--bezel-color),
+    inset -2px 0 0 0 var(--bezel-color),
+    inset 0 2px 0 0 var(--bezel-color-invert),
+    inset 2px 0 0 0 var(--bezel-color-invert),
+    var(--drop);
+}
+
+.Button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.Button.small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* Опасное действие: та же кнопка, только красная. */
+.Button.danger {
+  --button-bg-color: #b3392a;
+  --button-bg-hover-color: #cf4534;
+  --button-bg-active-color: #e05543;
+  --button-border-color: #6f1f14;
+  --button-text-color: #ffe8e2;
+}
+
+/* Прозрачный вариант живёт на тёмных панелях — подложка там лишняя. */
+.Button_clear {
+  box-shadow: none;
+  text-transform: none;
+  letter-spacing: 0;
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Account, Bootstrap, DeviceCode } from "../api";
 import { api, errorText } from "../api";
+import { Button } from "./McButton";
 
 interface Props {
   accounts: Account[];
@@ -92,9 +93,9 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
                   </div>
                 </div>
               </button>
-              <button className="link-button danger" onClick={() => remove(account.id)}>
+              <Button variant="clear" className="danger" onClick={() => remove(account.id)}>
                 Удалить
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -110,9 +111,9 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
               placeholder="Ник в игре"
               maxLength={16}
             />
-            <button className="play-button small" onClick={addOffline} disabled={!nickname.trim()}>
+            <Button variant="primary" className="small" onClick={addOffline} disabled={!nickname.trim()}>
               Добавить
-            </button>
+            </Button>
           </div>
         </label>
 
@@ -127,9 +128,9 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
               <div className="muted">{waiting ? "Ждём подтверждения…" : ""}</div>
             </div>
           ) : (
-            <button className="ghost-button" onClick={startMicrosoft}>
+            <Button variant="secondary" onClick={startMicrosoft}>
               Войти через Microsoft
-            </button>
+            </Button>
           )}
         </div>
 
@@ -137,9 +138,9 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
 
         <div className="modal-actions">
           <div className="spacer" />
-          <button className="ghost-button" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Закрыть
-          </button>
+          </Button>
         </div>
       </div>
     </div>

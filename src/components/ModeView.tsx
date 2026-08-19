@@ -1,6 +1,7 @@
 import type { Mode, ProgressEvent, UpdateReport } from "../api";
 import { formatBytes, loaderLabel } from "../api";
 import { Jellyfish, Starfish } from "./decor";
+import { Button } from "./McButton";
 
 interface Props {
   mode: Mode;
@@ -113,29 +114,29 @@ export function ModeView({
       </div>
 
       <div className="actions">
-        <button className="play-button" onClick={onPlay} disabled={busy || running}>
+        <Button variant="primary" onClick={onPlay} disabled={busy || running}>
           {actionLabel(report, running, busy)}
-        </button>
+        </Button>
         {running ? (
-          <button className="ghost-button" onClick={onStop}>
+          <Button variant="secondary" onClick={onStop}>
             Остановить игру
-          </button>
+          </Button>
         ) : (
-          <button className="ghost-button" onClick={onUpdate} disabled={busy}>
+          <Button variant="secondary" onClick={onUpdate} disabled={busy}>
             Только обновить
-          </button>
+          </Button>
         )}
-        <button className="ghost-button" onClick={onVerify} disabled={busy || running}>
+        <Button variant="secondary" onClick={onVerify} disabled={busy || running}>
           Проверить файлы
-        </button>
-        <button className="ghost-button" onClick={onOpenFolder}>
+        </Button>
+        <Button variant="secondary" onClick={onOpenFolder}>
           Папка режима
-        </button>
+        </Button>
         {/* Удалять нечего, пока сборка не установлена — кнопку не показываем вовсе. */}
         {report?.installed && (
-          <button className="ghost-button danger" onClick={onDelete} disabled={busy || running}>
+          <Button variant="secondary" className="danger" onClick={onDelete} disabled={busy || running}>
             Удалить
-          </button>
+          </Button>
         )}
       </div>
     </section>
