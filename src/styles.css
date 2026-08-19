@@ -1822,8 +1822,11 @@ img.avatar {
   line-height: 0;
 }
 
-/* Вещь вылетает из точки и раскрывается: пружина без плавных полутонов. */
+/* Вещь вылетает из точки и раскрывается: пружина без плавных полутонов.
+   Модель лежит выше вспышки — кубики разлетаются у неё за спиной. */
 .reveal-model {
+  position: relative;
+  z-index: 2;
   animation: reveal-pop 1.3s cubic-bezier(0.16, 1.3, 0.3, 1) both;
 }
 
@@ -1851,6 +1854,7 @@ img.avatar {
   position: absolute;
   left: 50%;
   top: 45%;
+  z-index: 1;
   pointer-events: none;
 }
 
