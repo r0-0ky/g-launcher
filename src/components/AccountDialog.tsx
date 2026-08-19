@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { Account, Bootstrap, DeviceCode } from "../api";
+import type { Account, Bootstrap } from "../api";
 import { api, errorText } from "../api";
 import { Button } from "./McButton";
 
@@ -17,59 +17,17 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
     (account) => account.id === activeId && account.kind === "gland" && !account.username
   );
 
-  const [nickname, setNickname] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [device, setDevice] = useState<DeviceCode | null>(null);
   const [glandWaiting, setGlandWaiting] = useState(false);
   const [glandNick, setGlandNick] = useState("");
-  const [waiting, setWaiting] = useState(false);
   const pollRef = useRef<number | null>(null);
 
-  // Опрос Microsoft живёт только пока открыт диалог.
+  // Опрос входа живёт только пока открыт диалог.
   useEffect(() => {
     return () => {
       if (pollRef.current) window.clearInterval(pollRef.current);
     };
   }, []);
-
-  async function addOffline() {
-    setError(null);
-    try {
-      onChanged(await api.addOfflineAccount(nickname));
-      setNickname("");
-    } catch (err) {
-      setError(errorText(err));
-    }
-  }
-
-  async function startMicrosoft() {
-    setError(null);
-    try {
-      const code = await api.msLoginStart();
-      setDevice(code);
-      setWaiting(true);
-      await openUrl(code.verificationUri);
-
-      pollRef.current = window.setInterval(async () => {
-        try {
-          const result = await api.msLoginPoll(code.deviceCode);
-          if (result) {
-            if (pollRef.current) window.clearInterval(pollRef.current);
-            setWaiting(false);
-            setDevice(null);
-            onChanged(result);
-          }
-        } catch (err) {
-          if (pollRef.current) window.clearInterval(pollRef.current);
-          setWaiting(false);
-          setDevice(null);
-          setError(errorText(err));
-        }
-      }, Math.max(code.interval, 2) * 1000);
-    } catch (err) {
-      setError(errorText(err));
-    }
-  }
 
   /** Вход через Telegram: открываем бота и ждём нажатия кнопки. */
   async function startGLand() {
@@ -150,23 +108,8 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
 
         <div className="divider" />
 
-        <label className="field">
-          <span>Оффлайн-аккаунт</span>
-          <div className="row">
-            <input
-              value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
-              placeholder="Ник в игре"
-              maxLength={16}
-            />
-            <Button variant="primary" onClick={addOffline} disabled={!nickname.trim()}>
-              Добавить
-            </Button>
-          </div>
-        </label>
-
         <div className="field">
-          <span>Аккаунт G Land</span>
+          <span>Вход</span>
           {glandWaiting ? (
             <div className="device-code">
               <div>Подтвердите вход в Telegram — нажмите «Start» у бота.</div>
@@ -196,23 +139,6 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
             <small>Менять можно когда угодно: прогресс на сервере привязан не к нику.</small>
           </label>
         )}
-
-        <div className="field">
-          <span>Лицензия Microsoft</span>
-          {device ? (
-            <div className="device-code">
-              <div>
-                Откройте <b>{device.verificationUri}</b> и введите код:
-              </div>
-              <div className="code">{device.userCode}</div>
-              <div className="muted">{waiting ? "Ждём подтверждения…" : ""}</div>
-            </div>
-          ) : (
-            <Button variant="secondary" onClick={startMicrosoft}>
-              Войти через Microsoft
-            </Button>
-          )}
-        </div>
 
         {error && <div className="error">{error}</div>}
 
