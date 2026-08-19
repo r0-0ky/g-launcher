@@ -58,6 +58,26 @@ function profileOf(account: AccountRow) {
   };
 }
 
+/**
+ * Одевает новичка в то, что задано в админке. Скин попадает и в библиотеку —
+ * иначе игрок не смог бы вернуть его, примерив другой.
+ */
+function dressNewcomer(accountId: string): void {
+  const skin = queries.getSetting.get("default_skin_sha1")?.value;
+  if (skin) {
+    const model =
+      queries.getSetting.get("default_skin_model")?.value === "slim" ? "slim" : "classic";
+    queries.addTexture.run({ account_id: accountId, kind: "skin", sha1: skin, model });
+    queries.setSkin.run(skin, model, accountId);
+  }
+
+  const cape = queries.getSetting.get("default_cape_sha1")?.value;
+  if (cape) {
+    queries.addTexture.run({ account_id: accountId, kind: "cape", sha1: cape, model: "classic" });
+    queries.setCape.run(cape, accountId);
+  }
+}
+
 /** Покупка целиком: монеты, история, запись о покупке и выдача вещи. */
 const buy = db.transaction(
   (
@@ -219,6 +239,7 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
         // возьмётся из запасного набора, вход от этого не страдает.
         if (account) {
           queries.setAvatar.run(await randomItemIcon(), account.id);
+          dressNewcomer(account.id);
           account = queries.accountById.get(account.id);
         }
       } else if (from.username && from.username !== account.telegram_name) {

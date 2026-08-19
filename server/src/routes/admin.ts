@@ -382,6 +382,68 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     });
 
     /** Предпросмотр итогового манифеста — включая скрытые сборки. */
+    // --- Что выдаётся новичкам ---
+
+    /** Скин и плащ, которые получает игрок при регистрации. */
+    secured.get("/defaults", async (request) => {
+      const origin = originOf(request);
+      const skin = queries.getSetting.get("default_skin_sha1")?.value ?? null;
+      const cape = queries.getSetting.get("default_cape_sha1")?.value ?? null;
+
+      return {
+        skin: skin
+          ? {
+              url: skinUrl(skin, origin),
+              model: queries.getSetting.get("default_skin_model")?.value ?? "classic",
+            }
+          : null,
+        cape: cape ? { url: skinUrl(cape, origin) } : null,
+      };
+    });
+
+    secured.post<{ Querystring: { kind?: string; model?: string } }>(
+      "/defaults",
+      async (request, reply) => {
+        const kind = request.query.kind === "cape" ? "cape" : "skin";
+
+        let data: Buffer | null = null;
+        for await (const part of request.parts()) {
+          if (part.type === "file") {
+            data = await part.toBuffer();
+            break;
+          }
+        }
+        if (!data) return reply.code(400).send({ error: "не приложен файл" });
+
+        const shape = inspectTexture(data, kind);
+        if (typeof shape === "string") return reply.code(400).send({ error: shape });
+
+        const sha1 = await putSkin(data);
+        if (kind === "skin") {
+          queries.setSetting.run("default_skin_sha1", sha1);
+          queries.setSetting.run(
+            "default_skin_model",
+            request.query.model === "slim" ? "slim" : "classic"
+          );
+        } else {
+          queries.setSetting.run("default_cape_sha1", sha1);
+        }
+
+        // Уже зарегистрированных не трогаем: у них свой выбор.
+        return { ok: true };
+      }
+    );
+
+    secured.delete<{ Querystring: { kind?: string } }>("/defaults", async (request) => {
+      if (request.query.kind === "cape") {
+        queries.dropSetting.run("default_cape_sha1");
+      } else {
+        queries.dropSetting.run("default_skin_sha1");
+        queries.dropSetting.run("default_skin_model");
+      }
+      return { ok: true };
+    });
+
     // --- Магазин и монеты ---
 
     /** Витрина целиком, включая скрытые позиции. */

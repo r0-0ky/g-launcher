@@ -163,6 +163,16 @@ export const api = {
       body: JSON.stringify({ id: newId, name }),
     }),
 
+  // --- Что выдаётся новичкам ---
+  defaults: () =>
+    request<{ skin: { url: string; model: string } | null; cape: { url: string } | null }>(
+      "/defaults"
+    ),
+  setDefault: (form: FormData, kind: "skin" | "cape", model: "classic" | "slim") =>
+    request<{ ok: true }>(`/defaults?kind=${kind}&model=${model}`, { method: "POST", body: form }),
+  clearDefault: (kind: "skin" | "cape") =>
+    request<{ ok: true }>(`/defaults?kind=${kind}`, { method: "DELETE" }),
+
   // --- Магазин ---
   shop: () => request<ShopItem[]>("/shop"),
   addShopItem: (form: FormData) =>

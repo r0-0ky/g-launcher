@@ -26,6 +26,10 @@ interface Props {
 
 export function ShopTab({ onError, onNotice }: Props) {
   const [items, setItems] = useState<ShopItem[]>([]);
+  const [defaults, setDefaults] = useState<{
+    skin: { url: string; model: string } | null;
+    cape: { url: string } | null;
+  }>({ skin: null, cape: null });
   const [players, setPlayers] = useState<PlayerAccount[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -39,9 +43,14 @@ export function ShopTab({ onError, onNotice }: Props) {
 
   async function reload() {
     try {
-      const [shop, accounts] = await Promise.all([api.shop(), api.players()]);
+      const [shop, accounts, presets] = await Promise.all([
+        api.shop(),
+        api.players(),
+        api.defaults(),
+      ]);
       setItems(shop);
       setPlayers(accounts);
+      setDefaults(presets);
     } catch (err) {
       onError(errorText(err));
     }
@@ -122,8 +131,84 @@ export function ShopTab({ onError, onNotice }: Props) {
     }
   }
 
+  /** Скин или плащ, который получают новички при регистрации. */
+  async function setDefaultTexture(kind: "skin" | "cape", picked: File | null) {
+    if (!picked) return;
+    onError(null);
+    try {
+      const form = new FormData();
+      form.append("file", picked);
+      await api.setDefault(form, kind, model);
+      onNotice(kind === "skin" ? "Скин новичкам задан" : "Плащ новичкам задан");
+      await reload();
+    } catch (err) {
+      onError(errorText(err));
+    }
+  }
+
+  async function clearDefault(kind: "skin" | "cape") {
+    onError(null);
+    try {
+      await api.clearDefault(kind);
+      await reload();
+    } catch (err) {
+      onError(errorText(err));
+    }
+  }
+
   return (
     <div className="shop">
+      <section className="card">
+        <h2>Новичкам при регистрации</h2>
+        <div className="shop-grid">
+          <div className="shop-item">
+            <div
+              className="shop-face"
+              style={{ backgroundImage: defaults.skin ? `url(${defaults.skin.url})` : undefined }}
+            />
+            <div className="muted small">
+              {defaults.skin
+                ? `Скин · ${defaults.skin.model === "slim" ? "тонкие руки" : "обычные руки"}`
+                : "Скин не задан — новички будут как Стив"}
+            </div>
+            <input
+              type="file"
+              accept="image/png"
+              onChange={(event) => setDefaultTexture("skin", event.target.files?.[0] ?? null)}
+            />
+            {defaults.skin && (
+              <button className="link danger" onClick={() => clearDefault("skin")}>
+                Убрать
+              </button>
+            )}
+          </div>
+
+          <div className="shop-item">
+            <div
+              className="shop-cape"
+              style={{ backgroundImage: defaults.cape ? `url(${defaults.cape.url})` : undefined }}
+            />
+            <div className="muted small">
+              {defaults.cape ? "Плащ" : "Плащ не задан — по желанию"}
+            </div>
+            <input
+              type="file"
+              accept="image/png"
+              onChange={(event) => setDefaultTexture("cape", event.target.files?.[0] ?? null)}
+            />
+            {defaults.cape && (
+              <button className="link danger" onClick={() => clearDefault("cape")}>
+                Убрать
+              </button>
+            )}
+          </div>
+        </div>
+        <small className="muted">
+          Выдаётся только новым аккаунтам: у тех, кто уже входил, свой выбор.
+          Модель рук берётся из поля ниже.
+        </small>
+      </section>
+
       <section className="card">
         <h2>Новая вещь</h2>
         <div className="grid2">

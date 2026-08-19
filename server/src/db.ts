@@ -172,6 +172,12 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_ledger_account ON coin_ledger(account_id, created_at);
+
+  -- Настройки сервера: пока это скин и плащ, которые выдаются новичкам.
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
 
 // Аватарка добавилась позже аккаунтов — в старых базах колонки нет.
@@ -271,6 +277,16 @@ export const queries = {
   countTextureUsers: db.prepare<[string], { count: number }>(
     `SELECT COUNT(*) AS count FROM textures WHERE sha1 = ?`
   ),
+
+  // --- Настройки сервера ---
+  getSetting: db.prepare<[string], { value: string }>(
+    `SELECT value FROM settings WHERE key = ?`
+  ),
+  setSetting: db.prepare(
+    `INSERT INTO settings (key, value) VALUES (?, ?)
+     ON CONFLICT (key) DO UPDATE SET value = excluded.value`
+  ),
+  dropSetting: db.prepare(`DELETE FROM settings WHERE key = ?`),
 
   // --- Монеты и магазин ---
   addCoins: db.prepare(
