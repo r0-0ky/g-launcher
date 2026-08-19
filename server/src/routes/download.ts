@@ -172,7 +172,7 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .send(createReadStream(file));
   });
 
-  app.get<{ Params: { name: string } }>("/download/:name(logo|bubble).png", async (request, reply) => {
+  app.get<{ Params: { name: string } }>("/download/:name(logo|bubble|favicon|favicon-180).png", async (request, reply) => {
     const file = assetPath(request.params.name + ".png");
     if (!file) return reply.code(404).send({ error: "не найдено" });
 
@@ -263,6 +263,8 @@ const page = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>G Launcher — скачать</title>
 <meta name="description" content="Лаунчер Minecraft со сборками: моды, шейдеры и обновления ставятся сами." />
+<link rel="icon" type="image/png" sizes="32x32" href="/download/favicon.png" />
+<link rel="apple-touch-icon" href="/download/favicon-180.png" />
 <link rel="stylesheet" href="/download/minecraft-react-ui.css" />
 <style>
   /* Титульный экран в духе игрового меню. Шрифт и палитра — те же, что в
@@ -452,7 +454,6 @@ const page = `<!doctype html>
     background: url("/download/bubble.png") 0 0 / 700% 100% no-repeat;
     image-rendering: pixelated;
   }
-  .Button.square.off .bubble-ico { opacity: 0.35; }
   .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
   .steps li { display: flex; gap: 14px; align-items: flex-start; }
   .steps b { display: block; font-size: 15px; }
@@ -523,7 +524,7 @@ const page = `<!doctype html>
       <button class="Button Button_secondary" data-go="about">Что внутри</button>
       <button class="Button Button_secondary" data-go="start">Как начать</button>
       <div class="row2">
-        <button class="Button Button_secondary square" id="bubbles-toggle" title="Пузырьки" aria-label="Пузырьки"><i class="bubble-ico"></i></button>
+        <button class="Button Button_secondary square" id="bubbles-toggle" title="Больше пузырьков" aria-label="Больше пузырьков"><i class="bubble-ico"></i></button>
         <a class="Button Button_secondary" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
         <a class="Button Button_secondary" href="https://www.sbmania.net/" target="_blank" rel="noreferrer">Боб</a>
         <button class="Button Button_secondary square" id="splash-roll" title="Сменить подпись" aria-label="Сменить подпись"><svg class="ico small" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M11 1h2v4h-2zm0 22h2v-4h-2zM9 5h2v4H9zm0 14h2v-4H9zm4-14h2v4h-2zm0 14h2v-4h-2zM5 9h4v2H5zm14 0h-4v2h4zM1 11h4v2H1zm22 0h-4v2h4zM5 13h4v2H5zm14 0h-4v2h4zm0-12h2v6h-2z"/><path d="M17 3h6v2h-6zM3 17h2v2H3zm-2 2h2v2H1zm2 2h2v2H3zm2-2h2v2H5z"/></svg></button>
@@ -696,11 +697,22 @@ const page = `<!doctype html>
   document.getElementById("splash-roll").addEventListener("click", roll);
   roll();
 
-  /* Пузырьки можно выключить — кнопка в углу нижнего ряда. */
+  /* Кнопка в углу нижнего ряда удваивает пузырьки. Потолок нужен, чтобы
+     страница не легла от тысячи анимаций; на потолке следующее нажатие
+     возвращает исходное количество. */
+  var BUBBLES_BASE = 18;
+  var BUBBLES_MAX = 288;
+  var bubbleCount = 0;
+  var addBubbles = null;
+  var resetBubbles = null;
+
   document.getElementById("bubbles-toggle").addEventListener("click", function () {
-    var layer = document.getElementById("bubbles");
-    layer.hidden = !layer.hidden;
-    this.classList.toggle("off", layer.hidden);
+    if (!addBubbles) return;
+    if (bubbleCount >= BUBBLES_MAX) {
+      resetBubbles();
+      return;
+    }
+    addBubbles(Math.min(bubbleCount, BUBBLES_MAX - bubbleCount));
   });
 
   /* --- Фон-видео. Нет файла — остаётся вода. --- */
@@ -870,7 +882,6 @@ const page = `<!doctype html>
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     var layer = document.getElementById("bubbles");
-    var COUNT = 18;
 
     function spawn(atStart) {
       var box = document.createElement("div");
@@ -903,7 +914,18 @@ const page = `<!doctype html>
       layer.appendChild(box);
     }
 
-    for (var i = 0; i < COUNT; i += 1) spawn(true);
+    addBubbles = function (count) {
+      for (var i = 0; i < count; i += 1) spawn(true);
+      bubbleCount += count;
+    };
+
+    resetBubbles = function () {
+      layer.textContent = "";
+      bubbleCount = 0;
+      addBubbles(BUBBLES_BASE);
+    };
+
+    resetBubbles();
   })();
 </script>
 </body>
