@@ -7,7 +7,6 @@ import type { FastifyInstance } from "fastify";
 import { config } from "../config.js";
 import { MONOCRAFT_BASE64 } from "./fonts.js";
 
-const BACKGROUND = "download-background.mp4";
 /** Первый кадр фона: показывается мгновенно, пока видео ещё качается. */
 const POSTER = "download-poster.jpg";
 
@@ -205,8 +204,10 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       .send(createReadStream(file));
   });
 
-  app.get("/download/background.mp4", async (request, reply) => {
-    const file = assetPath(BACKGROUND);
+  app.get<{ Params: { name: string } }>(
+    "/download/:name(background|background-mobile).mp4",
+    async (request, reply) => {
+    const file = assetPath("download-" + request.params.name + ".mp4");
     if (!file) {
       return reply.code(404).send({ error: "фон не загружен" });
     }
@@ -242,7 +243,8 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
     }
 
     return reply.header("content-length", info.size).send(createReadStream(file));
-  });
+    }
+  );
 
   app.get<{ Params: { name: string } }>("/download/fonts/:name", async (request, reply) => {
     const data = fonts[request.params.name];
@@ -696,12 +698,11 @@ const page = `<!doctype html>
       video.load();
     });
 
-    // На узком экране и при экономии трафика фон остаётся картинкой: тянуть
-    // ради него полтора десятка мегабайт по мобильной сети незачем.
-    var save = navigator.connection && navigator.connection.saveData;
-    if (window.matchMedia("(max-width: 640px)").matches || save) return;
-
-    video.src = "/download/background.mp4";
+    // Тот же ролик в двух весах: на узком экране берём облегчённый, чтобы не
+    // тянуть по мобильной сети лишнее. Кадр-заглушка видна, пока грузится.
+    var light = window.matchMedia("(max-width: 900px)").matches
+      || (navigator.connection && navigator.connection.saveData);
+    video.src = light ? "/download/background-mobile.mp4" : "/download/background.mp4";
   })();
 
   /* --- Данные релиза --- */
