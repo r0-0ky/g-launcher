@@ -811,6 +811,19 @@ const page = `<!doctype html>
     var light = window.matchMedia("(max-width: 900px)").matches
       || (navigator.connection && navigator.connection.saveData);
     video.src = light ? "/download/background-mobile.mp4" : "/download/background.mp4";
+
+    // Safari на iOS решает про автозапуск в момент готовности элемента, а src мы
+    // проставляем скриптом позже — поэтому просим проигрывание явно. В режиме
+    // энергосбережения он всё равно откажет, тогда фон стартует с первого касания.
+    function tryPlay() {
+      var started = video.play();
+      if (started && started.catch) started.catch(function () { undefined; });
+    }
+
+    video.addEventListener("loadeddata", tryPlay);
+    tryPlay();
+    window.addEventListener("pointerdown", tryPlay, { once: true });
+    window.addEventListener("touchstart", tryPlay, { once: true });
   })();
 
   /* --- Данные релиза --- */
