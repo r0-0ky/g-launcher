@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
 import { config } from "../config.js";
+import { PIXELIFY_CYRILLIC_BASE64, PIXELIFY_LATIN_BASE64 } from "./fonts.js";
 
 /**
  * Страница загрузки лаунчера. Данные берутся из последнего релиза на GitHub,
@@ -114,6 +115,21 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
     reply.header("cache-control", "no-cache").type("text/html; charset=utf-8");
     return page;
   });
+
+  // Шрифт страницы. Содержимое неизменно, поэтому кэш вечный.
+  const fonts: Record<string, string> = {
+    "pixelify-latin.woff2": PIXELIFY_LATIN_BASE64,
+    "pixelify-cyrillic.woff2": PIXELIFY_CYRILLIC_BASE64,
+  };
+
+  app.get<{ Params: { name: string } }>("/download/fonts/:name", async (request, reply) => {
+    const data = fonts[request.params.name];
+    if (!data) return reply.code(404).send({ error: "не найдено" });
+    return reply
+      .header("cache-control", "public, max-age=31536000, immutable")
+      .type("font/woff2")
+      .send(Buffer.from(data, "base64"));
+  });
 }
 
 const page = `<!doctype html>
@@ -124,18 +140,39 @@ const page = `<!doctype html>
 <title>Gandoni Launcher — скачать</title>
 <meta name="description" content="Лаунчер Minecraft со сборками: моды, шейдеры и обновления ставятся сами." />
 <style>
-  /* Палитра и шрифт те же, что в самом лаунчере (src/styles.css) — Jellyfish Fields. */
+  /* Шрифт и палитра те же, что в самом лаунчере (src/styles.css): вода
+     Jellyfish Fields плюс пиксельные панели в духе Minecraft. */
+  @font-face {
+    font-family: "Pixelify Sans"; font-style: normal; font-weight: 400 700; font-display: block;
+    src: url("/download/fonts/pixelify-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2190-2193, U+2212;
+  }
+  @font-face {
+    font-family: "Pixelify Sans"; font-style: normal; font-weight: 400 700; font-display: block;
+    src: url("/download/fonts/pixelify-cyrillic.woff2") format("woff2");
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  }
   :root {
     --water-top: #4ad6ec; --water-mid: #18a8d4; --water-deep: #0d80b6;
     --grass: #93d84e; --grass-deep: #6cb62f;
-    --sunny: #ffd744; --sunny-deep: #f0b21e;
-    --ink: #0f3646; --paper: #fdf7ea; --sand: #f7e3ad; --danger: #c23a26;
+    --sand: #f7e3ad; --danger: #b3392a;
+    /* Пиксельная фаска: светлая грань сверху-слева, тёмная снизу-справа. */
+    --px: 3px;
+    --stone: #8f8f8f; --stone-hover: #a8a8a8; --stone-hi: #cdcdcd; --stone-lo: #4c4c4c;
+    --panel: #c6c6c6; --panel-ink: #2b2b30; --outline: #16161a;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; }
+  /* Пиксельный шрифт — только на заголовки и кнопки: в нём «5» похожа на «S»,
+     а «ы» и «ш» нарисованы латиницей, поэтому версии и размеры файлов
+     оставляем обычным шрифтом. */
+  h1, h2, h3, a.primary, .num, .section-title, .soon {
+    font-family: "Pixelify Sans", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
+    font-weight: 400; letter-spacing: 0.4px;
+  }
   body {
-    min-height: 100vh; color: var(--ink);
+    min-height: 100vh; color: var(--panel-ink);
     font-family: "Chalkboard SE", "Comic Sans MS", "Comic Neue", "Marker Felt", system-ui, sans-serif;
     background: linear-gradient(180deg, var(--water-top) 0%, var(--water-mid) 48%, var(--water-deep) 100%);
     background-attachment: fixed;
@@ -151,12 +188,12 @@ const page = `<!doctype html>
   .seabed { position: fixed; left: 0; right: 0; bottom: 0; height: 150px; z-index: 0; pointer-events: none; }
   .sand {
     position: absolute; left: -10px; right: -10px; bottom: 0; height: 70px;
-    background: var(--sand); border-top: 5px solid var(--ink); border-radius: 40% 55% 0 0 / 26px 22px 0 0;
+    background: var(--sand); box-shadow: inset 0 var(--px) 0 0 #fff3cf, 0 0 0 var(--px) var(--outline);
   }
   .blade {
-    position: absolute; bottom: 56px; width: 15px; border-radius: 10px 10px 4px 4px;
+    position: absolute; bottom: 56px; width: 15px;
     background: linear-gradient(180deg, var(--grass), var(--grass-deep));
-    border: 3px solid var(--ink); transform-origin: bottom center;
+    box-shadow: 0 0 0 var(--px) var(--outline); transform-origin: bottom center;
     animation: sway 6s ease-in-out infinite;
   }
   @keyframes sway {
@@ -195,71 +232,99 @@ const page = `<!doctype html>
 
   /* --- Контент --- */
   main { position: relative; z-index: 2; max-width: 880px; margin: 0 auto; }
+  /* Каменная панель: фаска вместо скругления и мягкой тени. */
   .card {
-    background: var(--paper); border: 5px solid var(--ink); border-radius: 28px;
-    box-shadow: 6px 8px 0 rgba(10, 40, 60, 0.35);
+    background: var(--panel);
+    box-shadow:
+      inset var(--px) var(--px) 0 0 #efefef,
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+      0 0 0 var(--px) var(--outline);
   }
   .hero { padding: 30px 28px 26px; text-align: center; }
   .mark { font-size: 44px; line-height: 1; animation: sway 7s ease-in-out infinite; display: inline-block; }
   h1 { margin: 6px 0 6px; font-size: 34px; letter-spacing: 0.3px; }
-  .tagline { margin: 0 auto 14px; max-width: 30em; font-size: 15px; line-height: 1.5; opacity: 0.85; }
+  .tagline { margin: 0 auto 14px; max-width: 30em; font-size: 15px; line-height: 1.5; color: #4a4a52; }
   .version {
     display: inline-block; font-weight: 700; font-size: 13px; margin-bottom: 20px;
-    background: rgba(147, 216, 78, 0.35); border: 2.5px solid var(--ink);
-    border-radius: 999px; padding: 4px 14px;
+    padding: 5px 14px; background: var(--stone); color: #fff;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+    box-shadow:
+      inset var(--px) var(--px) 0 0 var(--stone-hi),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+      0 0 0 var(--px) var(--outline);
   }
   a.primary {
     display: block; max-width: 420px; margin: 0 auto; text-align: center;
-    text-decoration: none; color: var(--ink);
-    background: linear-gradient(180deg, var(--sunny), var(--sunny-deep));
-    border: 4px solid var(--ink); border-radius: 18px; padding: 16px 24px;
-    font-size: 19px; font-weight: 900; box-shadow: 3px 4px 0 rgba(10, 40, 60, 0.35);
-    transition: transform 0.12s ease;
+    text-decoration: none; color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+    background: linear-gradient(180deg, var(--grass), var(--grass-deep));
+    padding: 16px 24px; font-size: 19px; font-weight: 700;
+    box-shadow:
+      inset var(--px) var(--px) 0 0 var(--stone-hi),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+      0 0 0 var(--px) var(--outline);
   }
-  a.primary:hover { transform: scale(1.03) rotate(-1deg); }
-  .others { margin-top: 20px; border-top: 3px dashed rgba(15, 54, 70, 0.25); padding-top: 14px; text-align: left; }
-  .others h2 { font-size: 14px; margin: 0 0 8px; opacity: 0.75; text-align: center; }
+  a.primary:hover { background: linear-gradient(180deg, #a7e765, var(--grass)); }
+  /* Нажатие вдавливает кнопку: фаска переворачивается. */
+  a.primary:active {
+    box-shadow:
+      inset var(--px) var(--px) 0 0 var(--stone-lo),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+      0 0 0 var(--px) var(--outline);
+  }
+  .others { margin-top: 20px; border-top: var(--px) solid var(--stone-lo); padding-top: 14px; text-align: left; }
+  .others h2 { font-size: 14px; margin: 0 0 8px; color: #4a4a52; text-align: center; }
+  /* Строки — как слоты инвентаря. */
   .others a {
-    display: flex; justify-content: space-between; gap: 12px; color: var(--ink);
-    text-decoration: none; padding: 8px 12px; border-radius: 12px; font-size: 14px;
+    display: flex; justify-content: space-between; gap: 12px; color: #f2f2f2;
+    text-decoration: none; padding: 9px 12px; font-size: 14px; margin-bottom: 6px;
+    background: #6f6f6f; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
+    box-shadow:
+      inset var(--px) var(--px) 0 0 var(--stone-lo),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+      0 0 0 var(--px) var(--outline);
   }
-  .others a:hover { background: rgba(147, 216, 78, 0.3); }
-  .others .size { opacity: 0.6; white-space: nowrap; }
-  .note { margin: 18px auto 0; max-width: 34em; font-size: 13px; line-height: 1.55; opacity: 0.8; }
+  .others a:hover { background: var(--stone-hover); }
+  .others .size { color: #d9d9d9; white-space: nowrap; }
+  .note { margin: 18px auto 0; max-width: 34em; font-size: 13px; line-height: 1.55; color: #4a4a52; }
   .error { color: var(--danger); font-weight: 700; }
-  .soon { margin: 0; font-weight: 700; font-size: 15px; opacity: 0.85; }
+  .soon { margin: 0; font-weight: 700; font-size: 15px; color: #3f3f46; }
 
   .section-title {
-    color: #f2fbff; text-shadow: 2px 2px 0 rgba(10, 40, 60, 0.45);
+    color: #ffffff; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
     font-size: 22px; text-align: center; margin: 34px 0 14px;
   }
   .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
   .feat {
-    background: var(--paper); border: 4px solid var(--ink); border-radius: 20px;
-    padding: 16px 18px; box-shadow: 4px 5px 0 rgba(10, 40, 60, 0.3);
-    transition: transform 0.15s ease;
+    background: var(--panel); padding: 16px 18px;
+    box-shadow:
+      inset var(--px) var(--px) 0 0 #efefef,
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+      0 0 0 var(--px) var(--outline);
   }
-  .feat:hover { transform: translateY(-4px) rotate(-1deg); }
   .feat .ico { font-size: 26px; line-height: 1; }
   .feat h3 { margin: 8px 0 6px; font-size: 16px; }
-  .feat p { margin: 0; font-size: 13.5px; line-height: 1.5; opacity: 0.85; }
+  .feat p { margin: 0; font-size: 13.5px; line-height: 1.5; color: #4a4a52; }
 
   .steps { padding: 24px 28px; }
   .steps h2 { margin: 0 0 16px; font-size: 20px; text-align: center; }
   .steps ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
   .steps li { display: flex; gap: 14px; align-items: flex-start; }
   .num {
-    flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
-    font-weight: 900; background: linear-gradient(180deg, var(--sunny), var(--sunny-deep));
-    border: 3px solid var(--ink); box-shadow: 2px 2px 0 rgba(10, 40, 60, 0.3);
+    flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center;
+    font-weight: 700; color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+    background: linear-gradient(180deg, var(--grass), var(--grass-deep));
+    box-shadow:
+      inset var(--px) var(--px) 0 0 var(--stone-hi),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+      0 0 0 var(--px) var(--outline);
   }
   .steps p { margin: 5px 0 0; font-size: 14px; line-height: 1.5; }
   .steps b { display: block; font-size: 15px; }
 
   footer {
     position: relative; z-index: 2; max-width: 880px; margin: 26px auto 0;
-    padding-bottom: 190px; text-align: center; color: #eaf9ff; font-size: 13px;
-    line-height: 1.7; text-shadow: 1px 1px 0 rgba(10, 40, 60, 0.5);
+    padding-bottom: 190px; text-align: center; color: #ffffff; font-size: 13px;
+    line-height: 1.7; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
   }
   footer a { color: #fff; }
 

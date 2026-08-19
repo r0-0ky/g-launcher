@@ -1,3 +1,23 @@
+/* Pixelify Sans — OFL, лежит в assets/fonts вместе с текстом лицензии.
+   Возим с собой: лаунчер не должен ходить в сеть за шрифтом. */
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: block;
+  src: url("./assets/fonts/pixelify-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2190-2193, U+2212;
+}
+
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: block;
+  src: url("./assets/fonts/pixelify-cyrillic.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
 :root {
   /* Цвета взяты прямо из фона Jellyfish Fields */
   --water-top: #4ad6ec;
@@ -17,6 +37,19 @@
   --paper-line: #e6d9b6;
   --danger: #ef5b41;
   --danger-deep: #c23a26;
+
+  /* Интерфейс в духе Minecraft: вместо скруглений и мягких теней — пиксельные
+     фаски. Светлая грань сверху-слева, тёмная снизу-справа, чёрный контур
+     снаружи. Толщина одна на весь интерфейс, поэтому вынесена в переменную. */
+  --px: 3px;
+  --stone: #8f8f8f;
+  --stone-hover: #a8a8a8;
+  --stone-hi: #cdcdcd;
+  --stone-lo: #4c4c4c;
+  --panel: #c6c6c6;
+  --panel-ink: #2b2b30;
+  --slot: #7d7d7d;
+  --outline: #16161a;
   color-scheme: light;
 }
 
@@ -750,7 +783,8 @@ input:focus {
   align-items: center;
 }
 
-.error {
+/* Строки лога тоже носят класс .error — им нужен только цвет, не плашка. */
+.error:not(.log-line) {
   background: #ffe0d8;
   border: 3px solid var(--danger-deep);
   color: #7a231a;
@@ -973,4 +1007,415 @@ input:focus {
   border-radius: 999px;
   border: 3px solid transparent;
   background-clip: content-box;
+}
+
+/* ==========================================================================
+   Интерфейс в духе Minecraft
+
+   Всё, что ниже, задаёт вид элементов управления: пиксельные фаски вместо
+   скруглений, каменные панели, слоты, шрифт Pixelify Sans. Раскладка и
+   размеры остаются выше — здесь только поверхность.
+
+   Библиотеку minecraft-react-ui подключить не вышло: её npm-пакет
+   опубликован пустым (нет папки build), а у репозитория нет лицензии,
+   поэтому исходники брать нельзя. Внешний вид воспроизведён самостоятельно.
+
+   Фон Jellyfish Fields, пузырьки, маскоты и заставка намеренно оставлены —
+   это гибрид, а не смена темы.
+   ========================================================================== */
+
+/* Пиксельный шрифт идёт на заголовки и кнопки. В основной текст — намеренно
+   нет: в нём «5» легко спутать с «S», а «ы» и «ш» нарисованы латиницей, и
+   версии сборок вроде 1.20.1 читаются плохо. Числа и мелкий текст остаются
+   прежним шрифтом. */
+h1,
+h2,
+.brand-title,
+.mode-item-name,
+.account-name,
+.status-summary strong,
+.play-button,
+.ghost-button,
+.icon-button,
+.music-toggle,
+.link-button,
+.intro-skip {
+  font-family: "Pixelify Sans", "Chalkboard SE", "Comic Sans MS", system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.4px;
+}
+
+/* --- Выпуклые поверхности: всё, на что можно нажать --- */
+
+.play-button,
+.ghost-button,
+.icon-button,
+.music-toggle,
+.account-button,
+.chip,
+.update-banner,
+.error:not(.log-line),
+.device-code .code {
+  border: none;
+  border-radius: 0;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-hi),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+    0 0 0 var(--px) var(--outline);
+}
+
+/* --- Вдавленные: поля ввода, слоты, дорожка прогресса --- */
+
+input,
+.progress,
+.mode-item,
+.account-row,
+.console-body {
+  border: none;
+  border-radius: 0;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+    0 0 0 var(--px) var(--outline);
+}
+
+/* --- Панели --- */
+
+.sidebar,
+.console {
+  /* Полупрозрачные, чтобы вода за ними осталась видна. */
+  background: rgba(24, 24, 30, 0.74);
+  backdrop-filter: blur(8px) saturate(1.1);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  border: none;
+  box-shadow: inset calc(-1 * var(--px)) 0 0 0 var(--outline);
+  color: #f2f2f2;
+}
+
+.console {
+  box-shadow: inset 0 var(--px) 0 0 var(--outline);
+}
+
+.status-card,
+.modal,
+.hero {
+  background: var(--panel);
+  color: var(--panel-ink);
+  border: none;
+  border-radius: 0;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 #efefef,
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+    0 0 0 var(--px) var(--outline);
+}
+
+.hero {
+  /* Баннер сборки — картинка поверх камня, а не градиент воды. */
+  background: var(--panel) center / cover no-repeat;
+}
+
+.hero-overlay {
+  background: linear-gradient(180deg, rgba(20, 20, 26, 0.15), rgba(20, 20, 26, 0.78));
+}
+
+.hero h1,
+.hero p {
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.75);
+}
+
+/* --- Кнопки --- */
+
+button {
+  font-family: inherit;
+  letter-spacing: 0.2px;
+}
+
+.ghost-button,
+.icon-button,
+.music-toggle,
+.account-button {
+  background: var(--stone);
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.ghost-button:not(:disabled):hover,
+.icon-button:hover,
+.music-toggle:hover,
+.account-button:hover {
+  background: var(--stone-hover);
+  /* Никаких поворотов: пиксельный интерфейс живёт по сетке. */
+  transform: none;
+}
+
+.ghost-button:not(:disabled):active,
+.icon-button:active,
+.music-toggle:active {
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+    0 0 0 var(--px) var(--outline);
+}
+
+.ghost-button:disabled,
+.play-button:disabled {
+  background: #6b6b6b;
+  color: #b9b9b9;
+}
+
+.play-button {
+  background: linear-gradient(180deg, var(--grass), var(--grass-deep));
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  font-size: 16px;
+}
+
+.play-button:not(:disabled):hover {
+  background: linear-gradient(180deg, #a7e765, var(--grass));
+  transform: none;
+}
+
+.play-button:not(:disabled):active {
+  transform: none;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+    0 0 0 var(--px) var(--outline);
+}
+
+.ghost-button.danger {
+  background: #a63a2a;
+  color: #ffe8e2;
+}
+
+.link-button {
+  color: #d8f4ff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.music-toggle {
+  border-radius: 0;
+}
+
+/* --- Список сборок: слоты инвентаря --- */
+
+.mode-item {
+  background: rgba(58, 58, 66, 0.9);
+  color: #f2f2f2;
+  /* Раньше карточки были нарочито кривыми — теперь строго по сетке. */
+  transform: none;
+}
+
+.mode-item:nth-child(even) {
+  transform: none;
+}
+
+.mode-item:hover {
+  background: rgba(78, 78, 88, 0.95);
+  transform: none;
+}
+
+.mode-item.active {
+  background: linear-gradient(180deg, var(--grass-deep), #4a8a1e);
+  color: #ffffff;
+}
+
+.mode-item-name {
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.mode-item-meta,
+.account-kind {
+  color: #c9c9cf;
+}
+
+.mode-icon,
+.avatar {
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 0 0 var(--px) var(--outline);
+  image-rendering: pixelated;
+}
+
+.avatar {
+  background: linear-gradient(180deg, #7a5b3a, #55402a);
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.mode-icon.placeholder {
+  background: var(--slot);
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.update-dot {
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 0 0 2px var(--outline);
+  animation: none;
+}
+
+.sidebar-head {
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+.sidebar-footer {
+  border-top: var(--px) solid rgba(255, 255, 255, 0.18);
+}
+
+/* --- Метки, статус, прогресс --- */
+
+.chip {
+  background: var(--stone);
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  border-radius: 0;
+}
+
+.chip:nth-child(3n),
+.chip:nth-child(3n + 1),
+.chip:nth-child(4n) {
+  background: var(--stone);
+}
+
+.status-summary strong,
+.status-line {
+  color: var(--panel-ink);
+}
+
+.status-detail,
+.status-summary,
+.muted {
+  color: #55555c;
+}
+
+.progress {
+  background: #2b2b30;
+  height: 20px;
+  border-radius: 0;
+}
+
+.progress-bar {
+  /* Как шкала опыта: ровная зелёная заливка с пиксельной верхней гранью. */
+  background: linear-gradient(180deg, #9ae84f 0 6px, var(--grass-deep) 6px);
+  transition: width 0.15s steps(12);
+}
+
+/* --- Модальные окна и поля --- */
+
+.modal-backdrop {
+  background: rgba(0, 0, 0, 0.66);
+}
+
+.modal h2 {
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+input {
+  background: #2b2b30;
+  color: #f2f2f2;
+  padding: 10px 12px;
+}
+
+input:focus {
+  outline: none;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+    0 0 0 var(--px) #ffffff;
+}
+
+.field > span {
+  color: var(--panel-ink);
+}
+
+.divider {
+  border-top: var(--px) solid var(--stone-lo);
+}
+
+.account-row {
+  background: rgba(43, 43, 48, 0.9);
+  color: #f2f2f2;
+}
+
+.account-row.active {
+  background: linear-gradient(180deg, var(--grass-deep), #4a8a1e);
+}
+
+.device-code .code {
+  background: #2b2b30;
+  color: #9ae84f;
+  padding: 10px 14px;
+  /* Код набирают руками — только моноширинный, без пиксельных двусмысленностей. */
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* --- Плашки --- */
+
+.update-banner {
+  background: var(--stone);
+  color: #ffffff;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* Строки лога в консоли тоже носят класс .error — их эта плашка не касается. */
+.error:not(.log-line) {
+  background: #8c2f22;
+  color: #ffe3dd;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.brand-logo,
+.intro-skip {
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 0 0 var(--px) var(--outline);
+}
+
+.device-code {
+  background: #b9b9b9;
+  color: var(--panel-ink);
+  border: none;
+  border-radius: 0;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 #efefef,
+    0 0 0 var(--px) var(--outline);
+}
+
+.intro-skip {
+  background: rgba(0, 0, 0, 0.55);
+  font-family: inherit;
+}
+
+/* --- Консоль --- */
+
+.console-body {
+  background: #16161a;
+  color: #d6d6de;
+  box-shadow: none;
+}
+
+.log-line.error {
+  color: #ff8f7a;
+}
+
+/* --- Полоса прокрутки: тоже пиксельная --- */
+
+::-webkit-scrollbar-thumb {
+  background: var(--stone);
+  border-radius: 0;
+  border: 2px solid var(--outline);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(20, 20, 26, 0.5);
 }
