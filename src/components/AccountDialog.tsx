@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { Account, Bootstrap } from "../api";
+import type { Account, Bootstrap, Library } from "../api";
 import { api, errorText } from "../api";
 import { Button } from "./McButton";
+import { Close } from "./icons";
 
 interface Props {
   accounts: Account[];
@@ -24,7 +26,21 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
   const [error, setError] = useState<string | null>(null);
   const [glandWaiting, setGlandWaiting] = useState(false);
   const [glandNick, setGlandNick] = useState("");
+  const [library, setLibrary] = useState<Library | null>(null);
+  const [model, setModel] = useState<"classic" | "slim">("classic");
   const pollRef = useRef<number | null>(null);
+
+  // Библиотека текстур подтягивается, когда есть куда: без входа её нет.
+  useEffect(() => {
+    if (!signedIn) {
+      setLibrary(null);
+      return;
+    }
+    api
+      .glandTextures()
+      .then(setLibrary)
+      .catch((err) => setError(errorText(err)));
+  }, [signedIn]);
 
   // Опрос входа живёт только пока открыт диалог.
   useEffect(() => {
@@ -65,6 +81,30 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
     try {
       onChanged(await api.glandSetNickname(glandNick));
       setGlandNick("");
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
+  /** Заливка: выбираем файл на диске, остальное делает сервер. */
+  async function uploadTexture(kind: "skin" | "cape") {
+    setError(null);
+    try {
+      const picked = await open({
+        multiple: false,
+        filters: [{ name: "Картинка PNG", extensions: ["png"] }],
+      });
+      if (typeof picked !== "string") return;
+      setLibrary(await api.glandUploadTexture(picked, kind, model));
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
+  async function textureAction(action: Promise<Library>) {
+    setError(null);
+    try {
+      setLibrary(await action);
     } catch (err) {
       setError(errorText(err));
     }
@@ -126,6 +166,106 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
               </Button>
             )}
           </div>
+        )}
+
+        {library && (
+          <>
+            <div className="divider" />
+
+            <div className="field">
+              <span>Скин</span>
+              <div className="texture-grid">
+                {library.skins.map((texture) => (
+                  <div
+                    key={texture.id}
+                    className={`texture${texture.active ? " active" : ""}`}
+                    title={texture.model === "slim" ? "Тонкие руки" : "Обычные руки"}
+                  >
+                    <button
+                      className="texture-face"
+                      style={{ backgroundImage: `url(${texture.url})` }}
+                      onClick={() => textureAction(api.glandSelectTexture(texture.id))}
+                    />
+                    <button
+                      className="texture-drop"
+                      title="Убрать из библиотеки"
+                      onClick={() => textureAction(api.glandDeleteTexture(texture.id))}
+                    >
+                      <Close size={14} />
+                    </button>
+                  </div>
+                ))}
+                {library.skins.length === 0 && (
+                  <span className="muted">Пока ни одного — залейте свой</span>
+                )}
+              </div>
+              <div className="row">
+                <Button variant="secondary" onClick={() => uploadTexture("skin")}>
+                  Загрузить скин
+                </Button>
+                <label className="switch" title="Тонкие руки, как у модели Alex">
+                  <input
+                    type="checkbox"
+                    checked={model === "slim"}
+                    onChange={(event) => setModel(event.target.checked ? "slim" : "classic")}
+                  />
+                  <span className="switch-track">
+                    <span className="switch-knob" />
+                  </span>
+                  <span>Тонкие руки</span>
+                </label>
+                {library.profile.hasSkin && (
+                  <Button
+                    variant="clear"
+                    onClick={() => textureAction(api.glandClearTexture("skin"))}
+                  >
+                    Снять
+                  </Button>
+                )}
+              </div>
+              <small>Модель выбирается до загрузки: 64×64 или 64×32, не больше 200 КБ.</small>
+            </div>
+
+            <div className="field">
+              <span>Плащ</span>
+              <div className="texture-grid">
+                {library.capes.map((texture) => (
+                  <div
+                    key={texture.id}
+                    className={`texture${texture.active ? " active" : ""}`}
+                  >
+                    <button
+                      className="texture-cape"
+                      style={{ backgroundImage: `url(${texture.url})` }}
+                      onClick={() => textureAction(api.glandSelectTexture(texture.id))}
+                    />
+                    <button
+                      className="texture-drop"
+                      title="Убрать из библиотеки"
+                      onClick={() => textureAction(api.glandDeleteTexture(texture.id))}
+                    >
+                      <Close size={14} />
+                    </button>
+                  </div>
+                ))}
+                {library.capes.length === 0 && <span className="muted">Плащей пока нет</span>}
+              </div>
+              <div className="row">
+                <Button variant="secondary" onClick={() => uploadTexture("cape")}>
+                  Загрузить плащ
+                </Button>
+                {library.profile.hasCape && (
+                  <Button
+                    variant="clear"
+                    onClick={() => textureAction(api.glandClearTexture("cape"))}
+                  >
+                    Снять
+                  </Button>
+                )}
+              </div>
+              <small>Вдвое шире, чем выше: 64×32, 128×64, 256×128 или 512×256.</small>
+            </div>
+          </>
         )}
 
         {needsNickname && (

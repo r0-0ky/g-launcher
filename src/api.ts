@@ -106,6 +106,22 @@ export interface DeviceCode {
   expiresIn: number;
 }
 
+export interface Texture {
+  id: number;
+  kind: "skin" | "cape";
+  model: "classic" | "slim";
+  /** Адрес картинки — по нему рисуется превью. */
+  url: string;
+  /** Надета ли она сейчас. */
+  active: boolean;
+}
+
+export interface Library {
+  profile: { id: string; username: string | null; hasSkin: boolean; hasCape: boolean };
+  skins: Texture[];
+  capes: Texture[];
+}
+
 export interface GLandLogin {
   /** Одноразовый код: по нему лаунчер опрашивает сервер. */
   token: string;
@@ -129,6 +145,14 @@ export const api = {
   glandLoginPoll: (token: string) => invoke<Bootstrap | null>("gland_login_poll", { token }),
   glandSetNickname: (username: string) =>
     invoke<Bootstrap>("gland_set_nickname", { username }),
+  /** Библиотека текстур: что залито и что надето. */
+  glandTextures: () => invoke<Library>("gland_textures"),
+  glandUploadTexture: (path: string, kind: "skin" | "cape", model: "classic" | "slim") =>
+    invoke<Library>("gland_upload_texture", { path, kind, model }),
+  glandSelectTexture: (id: number) => invoke<Library>("gland_select_texture", { id }),
+  glandClearTexture: (kind: "skin" | "cape") =>
+    invoke<Library>("gland_clear_texture", { kind }),
+  glandDeleteTexture: (id: number) => invoke<Library>("gland_delete_texture", { id }),
   addOfflineAccount: (username: string) =>
     invoke<Bootstrap>("add_offline_account", { username }),
   msLoginStart: () => invoke<DeviceCode>("ms_login_start"),

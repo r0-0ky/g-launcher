@@ -1321,3 +1321,137 @@ input:focus {
     transform: rotate(360deg);
   }
 }
+
+/* --- Библиотека текстур: скины и плащи --- */
+
+.texture-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 8px;
+  align-items: flex-start;
+}
+
+.texture {
+  position: relative;
+  line-height: 0;
+}
+
+/* Превью вырезаются прямо из текстуры, поэтому размеры фона заданы в пикселях:
+   лицо — квадрат 8×8 в точке (8,8) скина, перёд плаща — 10×16 в точке (1,1). */
+.texture-face,
+.texture-cape {
+  display: block;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  cursor: pointer;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
+    0 0 0 var(--px) var(--outline);
+}
+
+.texture-face {
+  width: 48px;
+  height: 48px;
+  background-size: 384px 384px;
+  background-position: -48px -48px;
+}
+
+.texture-cape {
+  width: 40px;
+  height: 64px;
+  background-size: 256px 128px;
+  background-position: -4px -4px;
+}
+
+/* Надетая подсвечивается той же зеленью, что и кнопка действия. */
+.texture.active .texture-face,
+.texture.active .texture-cape {
+  box-shadow:
+    0 0 0 var(--px) var(--go),
+    0 0 0 calc(var(--px) * 2) var(--outline);
+}
+
+.texture-drop {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #fff;
+  background: #b3392a;
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 0 0 2px var(--outline);
+}
+
+.texture-drop:hover {
+  background: #cf4534;
+}
+
+/* --- Переключатель --- */
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Сам флажок нужен только ради клавиатуры и доступности — с глаз убираем. */
+.switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.switch-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 24px;
+  background: #2b2b30;
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
+    0 0 0 var(--px) var(--outline);
+}
+
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: var(--stone);
+  box-shadow:
+    inset 2px 2px 0 0 var(--stone-hi),
+    inset -2px -2px 0 0 var(--stone-lo),
+    0 0 0 2px var(--outline);
+  /* Рывками, а не плавно: интерфейс пиксельный. */
+  transition: left 0.12s steps(3);
+}
+
+.switch input:checked + .switch-track {
+  background: var(--go-deep);
+}
+
+.switch input:checked + .switch-track .switch-knob {
+  left: 25px;
+}
+
+.switch input:focus-visible + .switch-track {
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-lo),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
+    0 0 0 var(--px) #ffffff;
+}

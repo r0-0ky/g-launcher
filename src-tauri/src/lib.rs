@@ -402,25 +402,74 @@ async fn gland_login_poll(state: State<'_, AppState>, token: String) -> Result<O
     get_bootstrap(state).await.map(Some)
 }
 
+/// Адрес сервера и сессия активного аккаунта G Land — их просят все команды ниже.
+async fn gland_session(state: &State<'_, AppState>) -> Result<(String, String, String)> {
+    let store = state.store.lock().await;
+    let account = store
+        .active()
+        .filter(|a| a.kind == AccountKind::GLand)
+        .ok_or_else(|| Error::msg("сначала войдите в аккаунт G Land"))?;
+    let session = account
+        .session
+        .clone()
+        .ok_or_else(|| Error::msg("войдите в аккаунт G Land заново"))?;
+
+    Ok((
+        gland::base_from_manifest(&store.settings.manifest_url)?,
+        session,
+        account.id.clone(),
+    ))
+}
+
+/// Что игрок уже залил и что надето сейчас.
+#[tauri::command]
+async fn gland_textures(state: State<'_, AppState>) -> Result<gland::Library> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::textures(&state.client, &base, &session).await
+}
+
+/// Заливка файла с диска: он попадает в библиотеку и сразу надевается.
+#[tauri::command]
+async fn gland_upload_texture(
+    state: State<'_, AppState>,
+    path: String,
+    kind: String,
+    model: String,
+) -> Result<gland::Library> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::upload_texture(
+        &state.client,
+        &base,
+        &session,
+        std::path::Path::new(&path),
+        &kind,
+        &model,
+    )
+    .await
+}
+
+#[tauri::command]
+async fn gland_select_texture(state: State<'_, AppState>, id: i64) -> Result<gland::Library> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::select_texture(&state.client, &base, &session, id).await
+}
+
+#[tauri::command]
+async fn gland_clear_texture(state: State<'_, AppState>, kind: String) -> Result<gland::Library> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::clear_texture(&state.client, &base, &session, &kind).await
+}
+
+#[tauri::command]
+async fn gland_delete_texture(state: State<'_, AppState>, id: i64) -> Result<gland::Library> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::delete_texture(&state.client, &base, &session, id).await
+}
+
 /// Ник меняется на сервере: UUID остаётся прежним, прогресс не теряется.
 #[tauri::command]
 async fn gland_set_nickname(state: State<'_, AppState>, username: String) -> Result<Bootstrap> {
-    let (base, session, id) = {
-        let store = state.store.lock().await;
-        let account = store
-            .active()
-            .filter(|a| a.kind == AccountKind::GLand)
-            .ok_or_else(|| Error::msg("сначала войдите в аккаунт G Land"))?;
-        let session = account
-            .session
-            .clone()
-            .ok_or_else(|| Error::msg("войдите в аккаунт G Land заново"))?;
-        (
-            gland::base_from_manifest(&store.settings.manifest_url)?,
-            session,
-            account.id.clone(),
-        )
-    };
+    let (base, session, id) = gland_session(&state).await?;
 
     let profile = gland::set_nickname(&state.client, &base, &session, &username).await?;
 
@@ -582,6 +631,11 @@ pub fn run() {
             gland_login_start,
             gland_login_poll,
             gland_set_nickname,
+            gland_textures,
+            gland_upload_texture,
+            gland_select_texture,
+            gland_clear_texture,
+            gland_delete_texture,
             ms_login_start,
             ms_login_poll,
             set_active_account,

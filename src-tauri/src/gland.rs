@@ -179,6 +179,112 @@ pub async fn game_token(client: &Client, base: &str, session: &str) -> Result<Ac
     })
 }
 
+/// Скин или плащ из библиотеки игрока.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Texture {
+    pub id: i64,
+    pub kind: String,
+    pub model: String,
+    /// Адрес картинки — по нему интерфейс показывает превью.
+    pub url: String,
+    /// Надета ли она сейчас.
+    pub active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Library {
+    pub profile: Profile,
+    pub skins: Vec<Texture>,
+    pub capes: Vec<Texture>,
+}
+
+async fn library(response: reqwest::Response) -> Result<Library> {
+    if !response.status().is_success() {
+        return Err(fail(response).await);
+    }
+    Ok(response.json().await?)
+}
+
+pub async fn textures(client: &Client, base: &str, session: &str) -> Result<Library> {
+    library(
+        client
+            .get(format!("{base}/api/me/textures"))
+            .bearer_auth(session)
+            .send()
+            .await?,
+    )
+    .await
+}
+
+/// Заливает файл с диска. Он попадает в библиотеку и сразу надевается.
+pub async fn upload_texture(
+    client: &Client,
+    base: &str,
+    session: &str,
+    path: &Path,
+    kind: &str,
+    model: &str,
+) -> Result<Library> {
+    let data = tokio::fs::read(path).await?;
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "texture.png".to_string());
+
+    let part = reqwest::multipart::Part::bytes(data)
+        .file_name(name)
+        .mime_str("image/png")?;
+    let form = reqwest::multipart::Form::new().part("file", part);
+
+    library(
+        client
+            .post(format!("{base}/api/me/textures"))
+            .query(&[("kind", kind), ("model", model)])
+            .bearer_auth(session)
+            .multipart(form)
+            .send()
+            .await?,
+    )
+    .await
+}
+
+pub async fn select_texture(client: &Client, base: &str, session: &str, id: i64) -> Result<Library> {
+    library(
+        client
+            .post(format!("{base}/api/me/textures/{id}/select"))
+            .bearer_auth(session)
+            .send()
+            .await?,
+    )
+    .await
+}
+
+/// Снять надетое, ничего не удаляя.
+pub async fn clear_texture(client: &Client, base: &str, session: &str, kind: &str) -> Result<Library> {
+    library(
+        client
+            .post(format!("{base}/api/me/textures/clear"))
+            .query(&[("kind", kind)])
+            .bearer_auth(session)
+            .send()
+            .await?,
+    )
+    .await
+}
+
+pub async fn delete_texture(client: &Client, base: &str, session: &str, id: i64) -> Result<Library> {
+    library(
+        client
+            .delete(format!("{base}/api/me/textures/{id}"))
+            .bearer_auth(session)
+            .send()
+            .await?,
+    )
+    .await
+}
+
 /// Откуда берём authlib-injector: у проекта есть служебный адрес с последней
 /// сборкой и её контрольной суммой.
 const AGENT_LATEST: &str = "https://authlib-injector.yushi.moe/artifact/latest.json";
