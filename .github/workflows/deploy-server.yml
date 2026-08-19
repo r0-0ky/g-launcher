@@ -109,6 +109,17 @@ jobs:
           fi
 
           docker compose pull
+
+          # Внутри контейнера процесс идёт от node (UID 1000), а папку с базой и модами
+          # мог создать root — при первом bootstrap или при распаковке бэкапа. Правим
+          # владельца самим докером: sudo у деплой-пользователя может и не быть.
+          mkdir -p data
+          if [ "$(stat -c %u data)" != "1000" ]; then
+            echo "data принадлежит UID $(stat -c %u data), отдаю пользователю node"
+            docker run --rm --user root -v "$PWD/data:/data" "$SERVER_IMAGE" \
+              chown -R 1000:1000 /data
+          fi
+
           docker compose up -d --remove-orphans
 
           # Ждём, пока контейнер сам себя признает здоровым (HEALTHCHECK из Dockerfile).
