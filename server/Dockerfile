@@ -21,6 +21,8 @@ ENV NODE_ENV=production \
 RUN mkdir -p /data && chown -R node:node /data
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+# Фон титульного экрана и прочая статика, которую раздаёт сервер.
+COPY assets ./assets
 COPY package.json ./
 USER node
 EXPOSE 8080

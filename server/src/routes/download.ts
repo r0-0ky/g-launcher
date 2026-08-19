@@ -1,20 +1,41 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import type { FastifyInstance } from "fastify";
 
 import { config } from "../config.js";
 import { PIXELIFY_CYRILLIC_BASE64, PIXELIFY_LATIN_BASE64 } from "./fonts.js";
 
+const BACKGROUND = "download-background.mp4";
+
 /**
- * Фон титульного экрана. Файл кладётся руками в DATA_DIR — так его можно
- * заменить, не пересобирая образ:
+ * Фон титульного экрана лежит в репозитории и едет в образе (server/assets).
+ * Путь считается от этого модуля, а не от рабочей папки: и в `dist/routes`,
+ * и в `src/routes` до `assets` ровно два уровня вверх.
+ */
+const bundledBackground = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "..",
+  "assets",
+  BACKGROUND
+);
+
+/**
+ * Тот же файл в DATA_DIR перебивает вшитый — так фон можно заменить на живом
+ * сервере, не пересобирая образ:
  *
  *   scp video.mp4 сервер:/srv/g-launcher/data/download-background.mp4
  *
- * Нет файла — страница просто останется с градиентом воды.
+ * Нет ни того, ни другого — страница останется с градиентом воды.
  */
-const BACKGROUND = "download-background.mp4";
+function backgroundPath(): string | null {
+  const override = resolve(config.dataDir, BACKGROUND);
+  if (existsSync(override)) return override;
+  if (existsSync(bundledBackground)) return bundledBackground;
+  return null;
+}
 
 /**
  * Страница загрузки лаунчера. Данные берутся из последнего релиза на GitHub,
@@ -136,8 +157,8 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
   };
 
   app.get("/download/background.mp4", async (request, reply) => {
-    const file = resolve(config.dataDir, BACKGROUND);
-    if (!existsSync(file)) {
+    const file = backgroundPath();
+    if (!file) {
       return reply.code(404).send({ error: "фон не загружен" });
     }
 
