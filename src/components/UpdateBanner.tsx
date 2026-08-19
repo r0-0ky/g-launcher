@@ -32,7 +32,7 @@ export function UpdateBanner({ update }: { update: SelfUpdateState }) {
 
       {!busy && (
         <div className="update-banner-actions">
-          <Button variant="primary" className="small" onClick={update.install}>
+          <Button variant="primary" onClick={update.install}>
             {update.stage === "failed" ? "Ещё раз" : "Обновить"}
           </Button>
           <Button variant="secondary" onClick={update.dismiss}>

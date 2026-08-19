@@ -19,7 +19,7 @@ import { UpdateBanner } from "./components/UpdateBanner";
 import { useSelfUpdate } from "./selfUpdate";
 import themeAudio from "./assets/theme.mp3";
 import { Button } from "./components/McButton";
-import { Alert, Close, VolumeOff, VolumeOn } from "./components/icons";
+import { Alert, Close } from "./components/icons";
 
 const MAX_LOG_LINES = 800;
 
@@ -254,6 +254,8 @@ export default function App() {
         onRefresh={() => void loadManifest(true)}
         refreshing={refreshing}
         updatable={updatable}
+        musicOff={musicOff}
+        onMusicToggle={() => setMusicOff((value) => !value)}
       />
 
       <main className="content">
@@ -332,13 +334,6 @@ export default function App() {
 
       <Snail className="corner-buddy" />
 
-      <button
-        className="music-toggle"
-        onClick={() => setMusicOff((value) => !value)}
-        title={musicOff ? "Включить музыку" : "Выключить музыку"}
-      >
-        {musicOff ? <VolumeOff /> : <VolumeOn />}
-      </button>
       </div>
     </>
   );

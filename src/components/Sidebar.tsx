@@ -1,7 +1,7 @@
 import type { Account, Mode } from "../api";
 import { loaderLabel } from "../api";
 import logo from "../assets/logo-gland.webp";
-import { Reload, Settings, User } from "./icons";
+import { Reload, Settings, User, VolumeOff, VolumeOn } from "./icons";
 
 interface Props {
   modes: Mode[];
@@ -13,6 +13,8 @@ interface Props {
   onRefresh: () => void;
   refreshing: boolean;
   updatable: Record<string, boolean>;
+  musicOff: boolean;
+  onMusicToggle: () => void;
 }
 
 export function Sidebar({
@@ -25,6 +27,8 @@ export function Sidebar({
   onRefresh,
   refreshing,
   updatable,
+  musicOff,
+  onMusicToggle,
 }: Props) {
   return (
     <aside className="sidebar">
@@ -73,12 +77,14 @@ export function Sidebar({
           <div className="avatar">
             {account ? account.username.slice(0, 1).toUpperCase() : <User size={16} />}
           </div>
-          <div className="account-text">
-            <div className="account-name">{account ? account.username : "Нет аккаунта"}</div>
-            <div className="account-kind">
-              {account ? (account.kind === "microsoft" ? "Microsoft" : "Оффлайн") : "Нажмите, чтобы войти"}
-            </div>
-          </div>
+          <div className="account-name">{account ? account.username : "Нет аккаунта"}</div>
+        </button>
+        <button
+          className="icon-button"
+          onClick={onMusicToggle}
+          title={musicOff ? "Включить музыку" : "Выключить музыку"}
+        >
+          {musicOff ? <VolumeOff /> : <VolumeOn />}
         </button>
         <button className="icon-button" onClick={onSettingsClick} title="Настройки">
           <Settings />

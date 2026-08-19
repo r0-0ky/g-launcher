@@ -111,7 +111,7 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
               placeholder="Ник в игре"
               maxLength={16}
             />
-            <Button variant="primary" className="small" onClick={addOffline} disabled={!nickname.trim()}>
+            <Button variant="primary" onClick={addOffline} disabled={!nickname.trim()}>
               Добавить
             </Button>
           </div>

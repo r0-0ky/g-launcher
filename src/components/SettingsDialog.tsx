@@ -157,7 +157,7 @@ export function SettingsDialog({ settings, gameRoot, onClose, onSaved }: Props) 
           <Button variant="secondary" onClick={onClose}>
             Отмена
           </Button>
-          <Button variant="primary" className="small" onClick={save} disabled={saving}>
+          <Button variant="primary" onClick={save} disabled={saving}>
             {saving ? "Сохраняем…" : "Сохранить"}
           </Button>
         </div>
