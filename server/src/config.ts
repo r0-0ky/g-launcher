@@ -33,7 +33,23 @@ export const config = {
   telegramWebhookSecret: (process.env.TELEGRAM_WEBHOOK_SECRET ?? "").trim(),
   /** Сколько живёт сессия игрока в лаунчере. */
   accountSessionTtlMs: Number(process.env.ACCOUNT_SESSION_TTL_DAYS ?? 30) * 86400 * 1000,
+
+  /** Cloudflare R2 для скинов. Не задан — скины лягут на диск сервера. */
+  r2AccountId: (process.env.R2_ACCOUNT_ID ?? "").trim(),
+  r2Bucket: (process.env.R2_BUCKET ?? "").trim(),
+  r2AccessKeyId: (process.env.R2_ACCESS_KEY_ID ?? "").trim(),
+  r2SecretAccessKey: (process.env.R2_SECRET_ACCESS_KEY ?? "").trim(),
+  /**
+   * Публичный адрес бакета (r2.dev или свой домен). Если задан, игроков за
+   * скинами отправляем прямо туда, и трафик мимо нас.
+   */
+  r2PublicUrl: (process.env.R2_PUBLIC_URL ?? "").replace(/\/+$/, ""),
 };
+
+/** R2 включается, только когда заданы все четыре значения. */
+export const r2Ready = Boolean(
+  config.r2AccountId && config.r2Bucket && config.r2AccessKeyId && config.r2SecretAccessKey
+);
 
 /** Вход через Telegram включается, только если бот настроен целиком. */
 export const telegramReady = Boolean(config.telegramBotToken && config.telegramBotName);
@@ -41,9 +57,12 @@ export const telegramReady = Boolean(config.telegramBotToken && config.telegramB
 export const paths = {
   db: resolve(config.dataDir, "gandoni.db"),
   files: resolve(config.dataDir, "files"),
+  /** Запасное хранилище скинов, когда R2 не настроен. */
+  skins: resolve(config.dataDir, "skins"),
 };
 
 export function ensureDataDirs(): void {
   mkdirSync(config.dataDir, { recursive: true });
   mkdirSync(paths.files, { recursive: true });
+  mkdirSync(paths.skins, { recursive: true });
 }

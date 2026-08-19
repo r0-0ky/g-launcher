@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { config, telegramReady } from "../config.js";
 import { queries } from "../db.js";
+import { dropSkin, inspectSkin, putSkin } from "../skins.js";
 import { loginUrl, sendMessage } from "../telegram.js";
 import type { AccountRow } from "../types.js";
 
@@ -210,6 +211,54 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
     }
 
     queries.setUsername.run(username, account.id);
+    return profileOf(queries.accountById.get(account.id) as AccountRow);
+  });
+
+  /** Загрузка своего скина: PNG 64×64 или 64×32, не больше 200 КБ. */
+  app.post<{ Querystring: { model?: string } }>("/me/skin", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const model = request.query.model === "slim" ? "slim" : "classic";
+
+    let data: Buffer | null = null;
+    for await (const part of request.parts()) {
+      if (part.type === "file") {
+        data = await part.toBuffer();
+        break;
+      }
+    }
+    if (!data) return reply.code(400).send({ error: "не приложен файл" });
+
+    const shape = inspectSkin(data);
+    if (typeof shape === "string") return reply.code(400).send({ error: shape });
+
+    const sha1 = await putSkin(data);
+    const previous = account.skin_sha1;
+    queries.setSkin.run(sha1, model, account.id);
+
+    // Старый скин удаляем, только если на него больше никто не смотрит.
+    if (previous && previous !== sha1) {
+      const users = queries.countSkinUsers.get(previous);
+      if (!users || users.count === 0) await dropSkin(previous);
+    }
+
+    return profileOf(queries.accountById.get(account.id) as AccountRow);
+  });
+
+  /** Снять скин — игрок снова выглядит как Стив. */
+  app.delete("/me/skin", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const previous = account.skin_sha1;
+    queries.setSkin.run(null, account.skin_model, account.id);
+
+    if (previous) {
+      const users = queries.countSkinUsers.get(previous);
+      if (!users || users.count === 0) await dropSkin(previous);
+    }
+
     return profileOf(queries.accountById.get(account.id) as AccountRow);
   });
 

@@ -135,6 +135,9 @@ export const queries = {
   setUsername: db.prepare(
     `UPDATE accounts SET username = ?, updated_at = datetime('now') WHERE id = ?`
   ),
+  countSkinUsers: db.prepare<[string], { count: number }>(
+    `SELECT COUNT(*) AS count FROM accounts WHERE skin_sha1 = ?`
+  ),
   setSkin: db.prepare(
     `UPDATE accounts SET skin_sha1 = ?, skin_model = ?, updated_at = datetime('now') WHERE id = ?`
   ),
