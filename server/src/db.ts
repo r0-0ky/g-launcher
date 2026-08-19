@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 
 import { ensureDataDirs, paths } from "./config.js";
-import type { AccountRow, ModeFileRow, ModeInput, ModeRow } from "./types.js";
+import type { AccountRow, ModeFileRow, ModeInput, ModeRow, TextureRow } from "./types.js";
 
 // Модуль открывает базу прямо при импорте, поэтому папки создаём здесь же:
 // index.ts выполнится позже, чем эта строка.
@@ -113,7 +113,28 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_game_tokens_account ON game_tokens(account_id);
+
+  -- Библиотека текстур игрока: залитые скины и плащи. Активные лежат в самом
+  -- аккаунте, здесь — всё, из чего можно выбрать.
+  CREATE TABLE IF NOT EXISTS textures (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL CHECK (kind IN ('skin', 'cape')),
+    sha1       TEXT NOT NULL,
+    model      TEXT NOT NULL DEFAULT 'classic',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (account_id, kind, sha1)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_textures_account ON textures(account_id, kind);
 `);
+
+// Плащ добавился позже скина — в старых базах колонки нет.
+try {
+  db.exec(`ALTER TABLE accounts ADD COLUMN cape_sha1 TEXT`);
+} catch {
+  // Колонка уже на месте.
+}
 
 const columns = {
   mode: `id, name, description, version, icon, banner, minecraft, loader_type, loader_version,
@@ -158,6 +179,27 @@ export const queries = {
   countSkinUsers: db.prepare<[string], { count: number }>(
     `SELECT COUNT(*) AS count FROM accounts WHERE skin_sha1 = ?`
   ),
+  setCape: db.prepare(
+    `UPDATE accounts SET cape_sha1 = ?, updated_at = datetime('now') WHERE id = ?`
+  ),
+  countCapeUsers: db.prepare<[string], { count: number }>(
+    `SELECT COUNT(*) AS count FROM accounts WHERE cape_sha1 = ?`
+  ),
+
+  // --- Библиотека текстур ---
+  texturesOf: db.prepare<[string, string], TextureRow>(
+    `SELECT * FROM textures WHERE account_id = ? AND kind = ? ORDER BY created_at DESC`
+  ),
+  textureById: db.prepare<[number], TextureRow>(`SELECT * FROM textures WHERE id = ?`),
+  addTexture: db.prepare(
+    `INSERT INTO textures (account_id, kind, sha1, model) VALUES (@account_id, @kind, @sha1, @model)
+     ON CONFLICT (account_id, kind, sha1) DO UPDATE SET model = @model`
+  ),
+  dropTexture: db.prepare(`DELETE FROM textures WHERE id = ?`),
+  countTextureUsers: db.prepare<[string], { count: number }>(
+    `SELECT COUNT(*) AS count FROM textures WHERE sha1 = ?`
+  ),
+
   setSkin: db.prepare(
     `UPDATE accounts SET skin_sha1 = ?, skin_model = ?, updated_at = datetime('now') WHERE id = ?`
   ),

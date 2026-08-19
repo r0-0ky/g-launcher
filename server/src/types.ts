@@ -81,7 +81,19 @@ export interface AccountRow {
   username: string | null;
   skin_sha1: string | null;
   skin_model: "classic" | "slim";
+  /** Активный плащ. Появился позже скина, поэтому может отсутствовать. */
+  cape_sha1?: string | null;
   banned: number;
   created_at: string;
   updated_at: string;
+}
+
+/** Одна залитая текстура в библиотеке игрока. */
+export interface TextureRow {
+  id: number;
+  account_id: string;
+  kind: "skin" | "cape";
+  sha1: string;
+  model: "classic" | "slim";
+  created_at: string;
 }

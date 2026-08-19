@@ -4,7 +4,8 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { config, telegramReady } from "../config.js";
 import { queries } from "../db.js";
-import { dropSkin, inspectSkin, putSkin } from "../skins.js";
+import { dropSkin, inspectTexture, putSkin, skinUrl } from "../skins.js";
+import { originOf } from "../util.js";
 import { loginUrl, sendMessage } from "../telegram.js";
 import type { AccountRow } from "../types.js";
 
@@ -47,8 +48,37 @@ function profileOf(account: AccountRow) {
     username: account.username,
     skinModel: account.skin_model,
     hasSkin: Boolean(account.skin_sha1),
+    hasCape: Boolean(account.cape_sha1),
     banned: Boolean(account.banned),
   };
+}
+
+/** Надевает текстуру: активные хранятся прямо в аккаунте. */
+function wear(
+  account: AccountRow,
+  kind: "skin" | "cape",
+  sha1: string | null,
+  model: "classic" | "slim"
+): void {
+  if (kind === "skin") queries.setSkin.run(sha1, model, account.id);
+  else queries.setCape.run(sha1, account.id);
+}
+
+/** Библиотека игрока: что залито и что надето сейчас. */
+function libraryOf(account: AccountRow, origin: string) {
+  const pack = (kind: "skin" | "cape") =>
+    queries.texturesOf.all(account.id, kind).map((texture) => ({
+      id: texture.id,
+      kind: texture.kind,
+      model: texture.model,
+      url: skinUrl(texture.sha1, origin),
+      active:
+        kind === "skin"
+          ? account.skin_sha1 === texture.sha1
+          : account.cape_sha1 === texture.sha1,
+    }));
+
+  return { profile: profileOf(account), skins: pack("skin"), capes: pack("cape") };
 }
 
 /** Достаёт аккаунт по сессионному токену. Протухшие сессии удаляет. */
@@ -214,52 +244,103 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
     return profileOf(queries.accountById.get(account.id) as AccountRow);
   });
 
-  /** Загрузка своего скина: PNG 64×64 или 64×32, не больше 200 КБ. */
-  app.post<{ Querystring: { model?: string } }>("/me/skin", async (request, reply) => {
+  /** Что игрок уже залил: из этого он и выбирает. */
+  app.get("/me/textures", async (request, reply) => {
     const account = await requireAccount(request, reply);
     if (!account) return;
-
-    const model = request.query.model === "slim" ? "slim" : "classic";
-
-    let data: Buffer | null = null;
-    for await (const part of request.parts()) {
-      if (part.type === "file") {
-        data = await part.toBuffer();
-        break;
-      }
-    }
-    if (!data) return reply.code(400).send({ error: "не приложен файл" });
-
-    const shape = inspectSkin(data);
-    if (typeof shape === "string") return reply.code(400).send({ error: shape });
-
-    const sha1 = await putSkin(data);
-    const previous = account.skin_sha1;
-    queries.setSkin.run(sha1, model, account.id);
-
-    // Старый скин удаляем, только если на него больше никто не смотрит.
-    if (previous && previous !== sha1) {
-      const users = queries.countSkinUsers.get(previous);
-      if (!users || users.count === 0) await dropSkin(previous);
-    }
-
-    return profileOf(queries.accountById.get(account.id) as AccountRow);
+    return libraryOf(account, originOf(request));
   });
 
-  /** Снять скин — игрок снова выглядит как Стив. */
-  app.delete("/me/skin", async (request, reply) => {
+  /**
+   * Загрузка текстуры. Она попадает в библиотеку и сразу становится активной —
+   * заливают обычно затем, чтобы надеть.
+   */
+  app.post<{ Querystring: { kind?: string; model?: string } }>(
+    "/me/textures",
+    async (request, reply) => {
+      const account = await requireAccount(request, reply);
+      if (!account) return;
+
+      const kind = request.query.kind === "cape" ? "cape" : "skin";
+      const model = request.query.model === "slim" ? "slim" : "classic";
+
+      let data: Buffer | null = null;
+      for await (const part of request.parts()) {
+        if (part.type === "file") {
+          data = await part.toBuffer();
+          break;
+        }
+      }
+      if (!data) return reply.code(400).send({ error: "не приложен файл" });
+
+      const shape = inspectTexture(data, kind);
+      if (typeof shape === "string") return reply.code(400).send({ error: shape });
+
+      const sha1 = await putSkin(data);
+      queries.addTexture.run({ account_id: account.id, kind, sha1, model });
+      wear(account, kind, sha1, model);
+
+      const fresh = queries.accountById.get(account.id) as AccountRow;
+      return libraryOf(fresh, originOf(request));
+    }
+  );
+
+  /** Надеть одну из уже залитых. */
+  app.post<{ Params: { id: string } }>("/me/textures/:id/select", async (request, reply) => {
     const account = await requireAccount(request, reply);
     if (!account) return;
 
-    const previous = account.skin_sha1;
-    queries.setSkin.run(null, account.skin_model, account.id);
-
-    if (previous) {
-      const users = queries.countSkinUsers.get(previous);
-      if (!users || users.count === 0) await dropSkin(previous);
+    const texture = queries.textureById.get(Number(request.params.id));
+    if (!texture || texture.account_id !== account.id) {
+      return reply.code(404).send({ error: "текстура не найдена" });
     }
 
-    return profileOf(queries.accountById.get(account.id) as AccountRow);
+    wear(account, texture.kind, texture.sha1, texture.model);
+    const fresh = queries.accountById.get(account.id) as AccountRow;
+    return libraryOf(fresh, originOf(request));
+  });
+
+  /** Снять текущую, ничего не удаляя из библиотеки. */
+  app.post<{ Querystring: { kind?: string } }>("/me/textures/clear", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const kind = request.query.kind === "cape" ? "cape" : "skin";
+    wear(account, kind, null, account.skin_model);
+
+    const fresh = queries.accountById.get(account.id) as AccountRow;
+    return libraryOf(fresh, originOf(request));
+  });
+
+  /** Убрать из библиотеки насовсем. */
+  app.delete<{ Params: { id: string } }>("/me/textures/:id", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const texture = queries.textureById.get(Number(request.params.id));
+    if (!texture || texture.account_id !== account.id) {
+      return reply.code(404).send({ error: "текстура не найдена" });
+    }
+
+    queries.dropTexture.run(texture.id);
+    if (texture.kind === "skin" && account.skin_sha1 === texture.sha1) {
+      queries.setSkin.run(null, account.skin_model, account.id);
+    }
+    if (texture.kind === "cape" && account.cape_sha1 === texture.sha1) {
+      queries.setCape.run(null, account.id);
+    }
+
+    // Файл убираем, только если на него больше никто не ссылается: тот же
+    // скин мог залить кто-то ещё, а хранится он один раз.
+    const inLibrary = queries.countTextureUsers.get(texture.sha1);
+    const asSkin = queries.countSkinUsers.get(texture.sha1);
+    const asCape = queries.countCapeUsers.get(texture.sha1);
+    if (!inLibrary?.count && !asSkin?.count && !asCape?.count) {
+      await dropSkin(texture.sha1);
+    }
+
+    const fresh = queries.accountById.get(account.id) as AccountRow;
+    return libraryOf(fresh, originOf(request));
   });
 
   app.post("/me/logout", async (request, reply) => {

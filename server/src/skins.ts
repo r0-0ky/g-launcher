@@ -28,10 +28,10 @@ export interface SkinShape {
 }
 
 /**
- * Проверяет, что это действительно PNG нужного размера. Формат разбираем сами:
- * заголовок PNG фиксированный, ширина и высота лежат в первом же блоке IHDR.
+ * Проверяет, что это действительно PNG подходящего размера. Формат разбираем
+ * сами: заголовок PNG фиксированный, ширина и высота лежат в блоке IHDR.
  */
-export function inspectSkin(data: Buffer): SkinShape | string {
+export function inspectTexture(data: Buffer, kind: "skin" | "cape"): SkinShape | string {
   if (data.length > MAX_BYTES) return "файл больше 200 КБ";
   if (data.length < 24 || !data.subarray(0, 8).equals(PNG_SIGNATURE)) return "это не PNG";
   if (data.subarray(12, 16).toString("ascii") !== "IHDR") return "повреждённый PNG";
@@ -39,10 +39,19 @@ export function inspectSkin(data: Buffer): SkinShape | string {
   const width = data.readUInt32BE(16);
   const height = data.readUInt32BE(20);
 
-  // 64×64 — современный скин, 64×32 — старый формат без второго слоя.
-  const fits = width === 64 && (height === 64 || height === 32);
-  if (!fits) return `скин должен быть 64×64 или 64×32, а не ${width}×${height}`;
+  if (kind === "skin") {
+    // 64×64 — современный скин, 64×32 — старый формат без второго слоя.
+    if (width !== 64 || (height !== 64 && height !== 32)) {
+      return `скин должен быть 64×64 или 64×32, а не ${width}×${height}`;
+    }
+    return { width, height };
+  }
 
+  // Плащ вдвое шире, чем выше: 64×32 у ванильного и вчетверо больше у чётких.
+  const sizes = [64, 128, 256, 512];
+  if (!sizes.includes(width) || height * 2 !== width) {
+    return `плащ должен быть вдвое шире, чем выше (64×32, 128×64, 256×128 или 512×256), а не ${width}×${height}`;
+  }
   return { width, height };
 }
 

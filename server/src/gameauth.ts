@@ -91,6 +91,10 @@ export function texturedProfile(
     };
   }
 
+  if (account.cape_sha1) {
+    textures.CAPE = { url: skinUrl(account.cape_sha1, origin) };
+  }
+
   const value = Buffer.from(
     JSON.stringify({
       timestamp: Date.now(),
