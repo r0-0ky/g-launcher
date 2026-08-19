@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-DEPLOY_PATH="${DEPLOY_PATH:-/opt/gandoni}"
+DEPLOY_PATH="${DEPLOY_PATH:-/srv/g-launcher}"
 # Владелец папки: тот, под кем будет ходить деплой. По умолчанию — вызвавший sudo.
 DEPLOY_USER="${DEPLOY_USER:-${SUDO_USER:-$(id -un)}}"
 
@@ -56,7 +56,8 @@ PUBLIC_URL=https://launcher.example.com
 # Репозиторий с релизами лаунчера — для страницы /download.
 GITHUB_REPO=r0-0ky/g-launcher
 
-# Образ, который выкладывает GitHub Actions.
+# Образ, который выкладывает GitHub Actions. Строку перезаписывает деплой —
+# править руками нужно только для отката на конкретный тег sha-<коммит>.
 SERVER_IMAGE=ghcr.io/r0-0ky/g-launcher/server:latest
 
 # Токен из Cloudflare Zero Trust → Networks → Tunnels → Install connector.
@@ -70,12 +71,16 @@ fi
 chmod 600 "$DEPLOY_PATH/.env"
 chown -R "$DEPLOY_USER":"$DEPLOY_USER" "$DEPLOY_PATH"
 
+# Внутри контейнера процесс идёт от пользователя node (UID 1000) — папку с базой
+# и модами он должен уметь писать независимо от того, под кем ходит деплой.
+chown -R 1000:1000 "$DEPLOY_PATH/data"
+
 cat <<NEXT
 
 Готово. Осталось:
 
-  1. Заполнить $DEPLOY_PATH/.env — ADMIN_PASSWORD, PUBLIC_URL, GITHUB_REPO,
-     SERVER_IMAGE (свой owner) и TUNNEL_TOKEN.
+  1. Заполнить $DEPLOY_PATH/.env — ADMIN_PASSWORD, PUBLIC_URL, GITHUB_REPO
+     и TUNNEL_TOKEN. SERVER_IMAGE проставит деплой.
   2. Положить публичный ключ деплоя в ~$DEPLOY_USER/.ssh/authorized_keys.
   3. Прописать в Cloudflare публичный хостнейм туннеля на http://gandoni:8080.
   4. Пушнуть в main — workflow deploy-server сам зальёт compose-файл и поднимет сервис.

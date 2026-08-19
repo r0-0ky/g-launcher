@@ -46,7 +46,7 @@ push → GitHub Actions → ghcr.io/r0-0ky/g-launcher/server:latest
 curl -fsSL https://raw.githubusercontent.com/r0-0ky/g-launcher/main/server/deploy/bootstrap.sh | sudo bash
 ```
 
-Скрипт ставит Docker, создаёт `/opt/gandoni` и шаблон `.env` с уже подставленным
+Скрипт ставит Docker, создаёт `/srv/g-launcher` и шаблон `.env` с уже подставленным
 репозиторием. Заполнить руками надо два поля: `ADMIN_PASSWORD` (длинный случайный)
 и `PUBLIC_URL` (твой домен), плюс `TUNNEL_TOKEN` из следующего шага.
 
@@ -55,7 +55,7 @@ curl -fsSL https://raw.githubusercontent.com/r0-0ky/g-launcher/main/server/deplo
 1. Cloudflare → **Zero Trust** → Networks → **Tunnels** → Create a tunnel → **Cloudflared**.
 2. Назови туннель, на шаге «Install and run a connector» скопируй **токен** — строку
    после `--token`. Сам коннектор ставить не надо: его поднимет `docker compose`.
-   Токен → в `TUNNEL_TOKEN` в `/opt/gandoni/.env`.
+   Токен → в `TUNNEL_TOKEN` в `/srv/g-launcher/.env`.
 3. Вкладка **Public Hostname** → Add a public hostname:
    - Subdomain/Domain: `launcher.example.com`
    - Type: **HTTP**, URL: **`gandoni:8080`** — это имя сервиса из `docker-compose.yml`,
@@ -82,7 +82,7 @@ ssh-keyscan -H "$(curl -s ifconfig.me)"   # строки — в секрет VPS
 | `VPS_HOST` | IP или домен сервера |
 | `VPS_USER` | пользователь SSH |
 | `VPS_SSH_KEY` | приватный ключ целиком, вместе со строками `-----BEGIN...` |
-| `VPS_PATH` | `/opt/gandoni` (необязательно, это же значение по умолчанию) |
+| `VPS_PATH` | `/srv/g-launcher` (необязательно, это же значение по умолчанию) |
 | `VPS_PORT` | порт SSH, если не 22 (необязательно) |
 | `VPS_KNOWN_HOSTS` | вывод `ssh-keyscan` (необязательно, но так безопаснее) |
 
@@ -104,13 +104,14 @@ healthcheck станет `healthy`. Если контейнер не подня�
 
 ```bash
 # на VPS
-cd /opt/gandoni
+cd /srv/g-launcher
 nano .env      # SERVER_IMAGE=ghcr.io/r0-0ky/g-launcher/server:sha-<коммит>
 docker compose up -d
 ```
 
 Каждая сборка тегируется и как `latest`, и как `sha-<коммит>`, так что вернуться
-на любую прошлую версию можно за секунды.
+на любую прошлую версию можно за секунды. `SERVER_IMAGE` в `.env` деплой
+перезаписывает сам — правка держится до следующего пуша в `main`.
 
 ### Ограничения Cloudflare
 
@@ -154,7 +155,7 @@ IP), добавь `GITHUB_TOKEN` с правом чтения публичных
 ### Бэкап и диагностика
 
 ```bash
-cd /opt/gandoni
+cd /srv/g-launcher
 
 # бэкап — просто папка data (база + залитые моды)
 tar czf gandoni-backup-$(date +%F).tgz data
