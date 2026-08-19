@@ -1,6 +1,6 @@
 [package]
 name = "gandoni-launcher"
-version = "0.2.1"
+version = "0.3.0"
 description = "Лаунчер Minecraft с режимами, авто-обновлением модов и запуском игры"
 authors = ["Gandoni"]
 edition = "2021"
