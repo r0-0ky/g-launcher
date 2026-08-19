@@ -1,8 +1,9 @@
+import { useEffect, useRef, useState } from "react";
 import type { Mode, ProgressEvent, UpdateReport } from "../api";
 import { formatBytes, loaderLabel } from "../api";
 import { Jellyfish, Starfish } from "./decor";
 import { Button } from "./McButton";
-import { Check, Folder, Play, Reload, Trash } from "./icons";
+import { Check, Folder, More, Play, Reload, Terminal, Trash } from "./icons";
 
 interface Props {
   mode: Mode;
@@ -16,13 +17,22 @@ interface Props {
   onStop: () => void;
   onOpenFolder: () => void;
   onDelete: () => void;
+  /** Консоль игры прячется в том же меню: обычному игроку она не нужна. */
+  consoleShown: boolean;
+  onToggleConsole: () => void;
 }
 
+/**
+ * Одна кнопка на все случаи: пока сборка не свежая, она обновляет, и только
+ * потом становится «Играть». Запускать недокачанную сборку смысла нет — сервер
+ * всё равно не пустит.
+ */
 function actionLabel(report: UpdateReport | null, running: boolean, busy: boolean) {
   if (running) return "Игра запущена";
-  if (busy) return "Запуск";
-  if (!report || !report.installed) return "Установить и играть";
-  if (report.needsUpdate) return "Обновить и играть";
+  if (busy) return report?.needsUpdate ? "Обновление" : "Запуск";
+  if (!report) return "Проверяем сборку";
+  if (!report.installed) return "Установить";
+  if (report.needsUpdate) return "Обновить";
   return "Играть";
 }
 
@@ -38,8 +48,31 @@ export function ModeView({
   onStop,
   onOpenFolder,
   onDelete,
+  consoleShown,
+  onToggleConsole,
 }: Props) {
   const percent = progress ? Math.round(progress.percent) : 0;
+  // Пока не обновлено — главная кнопка обновляет, а не запускает.
+  const outdated = !report || !report.installed || report.needsUpdate;
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [menuOpen]);
+
+  function pick(action: () => void) {
+    setMenuOpen(false);
+    action();
+  }
 
   return (
     <section className="mode-view">
@@ -115,36 +148,62 @@ export function ModeView({
       </div>
 
       <div className="actions">
-        <Button variant="primary" onClick={onPlay} disabled={busy || running}>
-          <Play />
+        <Button
+          variant="primary"
+          onClick={outdated ? onUpdate : onPlay}
+          disabled={busy || running || !report}
+        >
+          {outdated ? <Reload /> : <Play />}
           {actionLabel(report, running, busy)}
         </Button>
-        {running ? (
+
+        {running && (
           <Button variant="secondary" onClick={onStop}>
             Остановить игру
           </Button>
-        ) : (
-          <Button variant="secondary" onClick={onUpdate} disabled={busy}>
-            <Reload />
-            Только обновить
-          </Button>
         )}
-        <Button variant="secondary" onClick={onVerify} disabled={busy || running}>
-          <Check />
-          Проверить файлы
+
+        {/* Редкие действия убраны под кнопку с точками, чтобы ряд не пестрил. */}
+        <Button
+          variant="secondary"
+          className="icon-only"
+          onClick={() => setMenuOpen((open) => !open)}
+          title="Ещё"
+        >
+          <More />
         </Button>
-        <Button variant="secondary" onClick={onOpenFolder}>
-          <Folder />
-          Папка режима
-        </Button>
-        {/* Удалять нечего, пока сборка не установлена — кнопку не показываем вовсе. */}
-        {report?.installed && (
-          <Button variant="secondary" className="danger" onClick={onDelete} disabled={busy || running}>
-            <Trash />
-            Удалить
-          </Button>
-        )}
       </div>
+
+      {/* Полка раскрывается вниз и раздвигает страницу — так она ничего не
+          перекрывает, в отличие от всплывающего меню. */}
+      {menuOpen && (
+        <div className="actions extra" ref={menuRef}>
+          <Button variant="secondary" onClick={() => pick(onVerify)} disabled={busy || running}>
+            <Check />
+            Проверить файлы
+          </Button>
+          <Button variant="secondary" onClick={() => pick(onOpenFolder)}>
+            <Folder />
+            Папка режима
+          </Button>
+          <Button variant="secondary" onClick={() => pick(onToggleConsole)}>
+            <Terminal />
+            {consoleShown ? "Скрыть консоль" : "Консоль игры"}
+          </Button>
+          {/* Удалять нечего, пока сборка не установлена. */}
+          {report?.installed && (
+            <Button
+              variant="secondary"
+              className="danger"
+              onClick={() => pick(onDelete)}
+              disabled={busy || running}
+            >
+              <Trash />
+              Удалить
+            </Button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

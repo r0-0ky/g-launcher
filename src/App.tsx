@@ -34,6 +34,8 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [consoleOpen, setConsoleOpen] = useState(false);
+  // Консоль вызывается из меню режима — по умолчанию её не видно вовсе.
+  const [consoleShown, setConsoleShown] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   /** Что показываем в основной области: режим, аккаунт или магазин. */
   const [screen, setScreen] = useState<"mode" | "account" | "shop">("mode");
@@ -314,6 +316,11 @@ export default function App() {
             onStop={handleStop}
             onOpenFolder={() => void api.openModeFolder(selected.id)}
             onDelete={handleDelete}
+            consoleShown={consoleShown}
+            onToggleConsole={() => {
+              setConsoleShown((shown) => !shown);
+              setConsoleOpen(true);
+            }}
           />
         ) : (
           <div className="placeholder-view">
@@ -332,12 +339,14 @@ export default function App() {
           </div>
         )}
 
-        <Console
-          lines={logs}
-          open={consoleOpen}
-          onToggle={() => setConsoleOpen((value) => !value)}
-          onClear={() => setLogs([])}
-        />
+        {consoleShown && (
+          <Console
+            lines={logs}
+            open={consoleOpen}
+            onToggle={() => setConsoleOpen((value) => !value)}
+            onClear={() => setLogs([])}
+          />
+        )}
       </main>
 
       {showSettings && bootstrap && (

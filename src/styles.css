@@ -1285,6 +1285,14 @@ input:focus {
   opacity: 0.55;
 }
 
+/* Квадратная кнопка только со значком — как в панели слева. */
+.Button.icon-only {
+  width: var(--row);
+  height: var(--row);
+  min-width: var(--row);
+  padding: 0;
+}
+
 /* Опасное действие: та же кнопка, только красная. */
 .Button.danger {
   --button-bg-color: #b3392a;
@@ -1636,7 +1644,7 @@ img.avatar {
 .shop-grid {
   display: grid;
   /* Ширина карточки фиксированная: под неё же подогнан холст с моделью. */
-  grid-template-columns: repeat(auto-fill, 220px);
+  grid-template-columns: repeat(auto-fill, 240px);
   justify-content: start;
   gap: 14px;
   margin: 10px 0 8px;
@@ -1647,7 +1655,7 @@ img.avatar {
   --rarity: #9a9aa2;
   --rarity-deep: #4a4a52;
   position: relative;
-  width: 220px;
+  width: 240px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1671,7 +1679,7 @@ img.avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 250px;
+  height: 310px;
 }
 
 /* Внутри карточки холст без ниши: рамка тут одна — по краю карточки. Низ
@@ -1702,7 +1710,7 @@ img.avatar {
 }
 
 .shop-card-name {
-  font-size: 13px;
+  font-size: 17px;
   text-align: center;
   overflow-wrap: anywhere;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
@@ -1713,7 +1721,7 @@ img.avatar {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 15px;
   text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
 }
 
@@ -1752,23 +1760,117 @@ img.avatar {
   width: 100%;
 }
 
+/* --- Вещь крупным планом --- */
+
+.shop-detail {
+  --rarity: #9a9aa2;
+  --rarity-deep: #4a4a52;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  padding: 24px;
+  background: radial-gradient(
+    circle at 68% 42%,
+    var(--rarity) 0%,
+    var(--rarity-deep) 62%,
+    #1b1b20 100%
+  );
+  color: #ffffff;
+  box-shadow:
+    0 0 0 var(--px) var(--rarity),
+    0 0 0 calc(var(--px) * 2) var(--outline),
+    var(--drop);
+}
+
+.shop-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.shop-detail-info h3 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.shop-detail-info .shop-card-price {
+  font-size: 20px;
+}
+
+.shop-detail-info .muted {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Кнопки внизу колонки — как и просили, под описанием. */
+.shop-detail-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.shop-detail-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Плита под ногами: без неё модель висит в пустоте. */
+.shop-detail-stage::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  width: 230px;
+  height: 58px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 35%,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(0, 0, 0, 0.45) 62%,
+    transparent 100%
+  );
+}
+
+.shop-detail-stage .skin-preview {
+  position: relative;
+  background: transparent;
+  box-shadow: none;
+  cursor: grab;
+}
+
+.shop-stage-hint {
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
 /* Качество читается по цвету — как на витринах в играх. */
-.shop-card.rarity-green {
+.shop-card.rarity-green,
+.shop-detail.rarity-green {
   --rarity: #63c23a;
   --rarity-deep: #2f6b1c;
 }
 
-.shop-card.rarity-blue {
+.shop-card.rarity-blue,
+.shop-detail.rarity-blue {
   --rarity: #4f9bec;
   --rarity-deep: #1d4c86;
 }
 
-.shop-card.rarity-purple {
+.shop-card.rarity-purple,
+.shop-detail.rarity-purple {
   --rarity: #b061e8;
   --rarity-deep: #5a2585;
 }
 
-.shop-card.rarity-legendary {
+.shop-card.rarity-legendary,
+.shop-detail.rarity-legendary {
   --rarity: #ffc44d;
   --rarity-deep: #a35f10;
 }

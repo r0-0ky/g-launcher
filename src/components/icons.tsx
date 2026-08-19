@@ -78,6 +78,15 @@ export const Logout = icon([
   "M14 7h2v10h-2zm2 6h2v2h-2zM6 2h12v2H6zm0 18h12v2H6zM4 4h2v16H4zm14 0h2v3h-2zm0 13h2v3h-2z",
 ]);
 
+/** Окно с приглашением ввода — консоль игры. */
+export const Terminal = icon([
+  "M2 3h20v2H2zm0 16h20v2H2zM2 5h2v14H2zm18 0h2v14h-2z",
+  "M6 8h2v2H6zm2 2h2v2H8zm2 2h2v2h-2zm-2 2h2v2H8zm-2 2h2v2H6zm7 0h5v2h-5z",
+]);
+
+/** Три точки — за ними прячутся редкие действия. */
+export const More = icon(["M4 10h3v3H4zm6 0h3v3h-3zm6 0h3v3h-3z"]);
+
 /** Пустая ячейка: коробка с крестом — «ничего не надето». */
 export const NoTexture = icon([
   "M2 2h20v2H2zm0 18h20v2H2zM2 4h2v16H2zm18 0h2v16h-2z",

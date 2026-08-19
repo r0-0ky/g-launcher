@@ -50,6 +50,10 @@ pub struct Profile {
     /// Картинка предмета вместо аватарки.
     #[serde(default)]
     pub avatar: Option<String>,
+    /// Всё прочее, что отдаёт сервер, — пробрасываем как есть. Иначе новые
+    /// поля пропадали бы здесь по дороге к интерфейсу.
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -194,6 +198,8 @@ pub struct Texture {
     pub url: String,
     /// Надета ли она сейчас.
     pub active: bool,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -202,6 +208,8 @@ pub struct Library {
     pub profile: Profile,
     pub skins: Vec<Texture>,
     pub capes: Vec<Texture>,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 async fn library(response: reqwest::Response) -> Result<Library> {
@@ -316,6 +324,8 @@ pub struct ShopItem {
     pub url: String,
     /// Уже куплено — покупать второй раз нечего.
     pub owned: bool,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -323,6 +333,8 @@ pub struct ShopItem {
 pub struct Shop {
     pub coins: i64,
     pub items: Vec<ShopItem>,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
 }
 
 pub async fn shop(client: &Client, base: &str, session: &str) -> Result<Shop> {
