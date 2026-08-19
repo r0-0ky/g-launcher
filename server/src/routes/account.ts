@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { config, telegramReady } from "../config.js";
 import { db, queries } from "../db.js";
+import { iconUrl, randomItemIcon } from "../icons.js";
 import { dropSkin, inspectTexture, putSkin, skinUrl } from "../skins.js";
 import { originOf } from "../util.js";
 import { loginUrl, sendMessage } from "../telegram.js";
@@ -50,6 +51,7 @@ function profileOf(account: AccountRow) {
     hasSkin: Boolean(account.skin_sha1),
     hasCape: Boolean(account.cape_sha1),
     coins: account.coins ?? 0,
+    avatar: account.avatar_icon ? iconUrl(account.avatar_icon) : null,
     /** Заливка своих текстур может быть закрыта — тогда прячем кнопки. */
     canUpload: config.allowPlayerUploads,
     banned: Boolean(account.banned),
@@ -212,6 +214,13 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
           telegram_name: from.username ?? null,
         });
         account = queries.accountById.get(id);
+
+        // Аватарка новичку — случайный игровой предмет. Сервис недоступен —
+        // возьмётся из запасного набора, вход от этого не страдает.
+        if (account) {
+          queries.setAvatar.run(await randomItemIcon(), account.id);
+          account = queries.accountById.get(account.id);
+        }
       } else if (from.username && from.username !== account.telegram_name) {
         queries.touchTelegramName.run(from.username, account.id);
       }
@@ -397,6 +406,7 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
 
     return {
       coins: account.coins ?? 0,
+    avatar: account.avatar_icon ? iconUrl(account.avatar_icon) : null,
       items: queries.shopItems.all().map((item) => ({
         id: item.id,
         kind: item.kind,

@@ -174,6 +174,13 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_ledger_account ON coin_ledger(account_id, created_at);
 `);
 
+// Аватарка добавилась позже аккаунтов — в старых базах колонки нет.
+try {
+  db.exec(`ALTER TABLE accounts ADD COLUMN avatar_icon TEXT`);
+} catch {
+  // Колонка уже на месте.
+}
+
 // Качество добавилось позже витрины — в старых базах колонки нет.
 try {
   db.exec(`ALTER TABLE shop_items ADD COLUMN rarity TEXT NOT NULL DEFAULT 'green'`);
@@ -237,6 +244,9 @@ export const queries = {
   ),
   countSkinUsers: db.prepare<[string], { count: number }>(
     `SELECT COUNT(*) AS count FROM accounts WHERE skin_sha1 = ?`
+  ),
+  setAvatar: db.prepare(
+    `UPDATE accounts SET avatar_icon = ?, updated_at = datetime('now') WHERE id = ?`
   ),
   setCape: db.prepare(
     `UPDATE accounts SET cape_sha1 = ?, updated_at = datetime('now') WHERE id = ?`

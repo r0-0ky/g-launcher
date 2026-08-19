@@ -86,6 +86,8 @@ export interface AccountRow {
   banned: number;
   /** Кошелёк в G-коинах. */
   coins?: number;
+  /** Игровой предмет вместо аватарки — выдаётся при первом входе. */
+  avatar_icon?: string | null;
   created_at: string;
   updated_at: string;
 }

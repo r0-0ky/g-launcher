@@ -98,6 +98,9 @@ pub struct Account {
     /// токен для игры. Только у аккаунтов G Land.
     #[serde(default)]
     pub session: Option<String>,
+    /// Картинка предмета вместо аватарки — выдаётся сервером при регистрации.
+    #[serde(default)]
+    pub avatar: Option<String>,
 }
 
 impl Account {
@@ -112,6 +115,7 @@ impl Account {
             expires_at: 0,
             xuid: None,
             session: None,
+            avatar: None,
         }
     }
 }

@@ -144,7 +144,13 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
               className={`account-row${account.id === activeId ? " active" : ""}`}
             >
               <button className="account-select" onClick={() => select(account.id)}>
-                <div className="avatar small">{account.username.slice(0, 1).toUpperCase()}</div>
+                {account.avatar ? (
+                  <img className="avatar small" src={account.avatar} alt="" draggable={false} />
+                ) : (
+                  <div className="avatar small">
+                    {account.username.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
                 <div>
                   <div className="account-name">{account.username}</div>
                   <div className="account-kind">

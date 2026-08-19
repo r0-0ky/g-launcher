@@ -47,6 +47,9 @@ pub struct Profile {
     pub skin_model: String,
     #[serde(default)]
     pub has_skin: bool,
+    /// Картинка предмета вместо аватарки.
+    #[serde(default)]
+    pub avatar: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -176,6 +179,7 @@ pub async fn game_token(client: &Client, base: &str, session: &str) -> Result<Ac
         expires_at: 0,
         xuid: None,
         session: Some(session.to_string()),
+        avatar: None,
     })
 }
 

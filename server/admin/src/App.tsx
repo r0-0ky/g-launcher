@@ -4,8 +4,12 @@ import { api, errorText, getToken, setToken } from "./api";
 import { Login } from "./components/Login";
 import { ModeForm } from "./components/ModeForm";
 import { ContentTab } from "./components/ContentTab";
+import { ShopTab } from "./components/ShopTab";
 
 type Tab = "main" | "content";
+
+/** Админка делится надвое: сборки и магазин косметики. */
+type Screen = "modes" | "shop";
 
 function slugify(value: string): string {
   const map: Record<string, string> = {
@@ -31,6 +35,7 @@ export default function App() {
   const [detail, setDetail] = useState<ModeDetail | null>(null);
   const [draft, setDraft] = useState<Mode | null>(null);
   const [tab, setTab] = useState<Tab>("main");
+  const [screen, setScreen] = useState<Screen>("modes");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -171,11 +176,28 @@ export default function App() {
           </div>
         </div>
 
-        <button className="primary block" onClick={() => setCreating(true)}>
-          + Новая сборка
-        </button>
+        <nav className="tabs section-tabs">
+          <button
+            className={screen === "modes" ? "tab active" : "tab"}
+            onClick={() => setScreen("modes")}
+          >
+            Сборки
+          </button>
+          <button
+            className={screen === "shop" ? "tab active" : "tab"}
+            onClick={() => setScreen("shop")}
+          >
+            Магазин
+          </button>
+        </nav>
 
-        <div className="mode-list">
+        {screen === "modes" && (
+          <button className="primary block" onClick={() => setCreating(true)}>
+            + Новая сборка
+          </button>
+        )}
+
+        <div className="mode-list" hidden={screen === "shop"}>
           {modes.map((mode) => (
             <button
               key={mode.id}
@@ -230,7 +252,15 @@ export default function App() {
           </div>
         )}
 
-        {draft && detail ? (
+        {screen === "shop" ? (
+          <ShopTab
+            onError={setError}
+            onNotice={(message) => {
+              setNotice(message);
+              setTimeout(() => setNotice(null), 2000);
+            }}
+          />
+        ) : draft && detail ? (
           <>
             <header className="page-head">
               <div>

@@ -1546,3 +1546,12 @@ input:focus {
     order: -1;
   }
 }
+
+/* Аватарка-предмет: спрайт мелкий, поэтому тянем его пикселями и с полями,
+   чтобы не упирался в рамку. */
+img.avatar {
+  object-fit: contain;
+  padding: 3px;
+  background: #55555c;
+  image-rendering: pixelated;
+}

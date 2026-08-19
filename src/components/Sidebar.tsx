@@ -74,9 +74,13 @@ export function Sidebar({
 
       <div className="sidebar-footer">
         <button className="account-button" onClick={onAccountClick}>
-          <div className="avatar">
-            {account ? account.username.slice(0, 1).toUpperCase() : <User size={16} />}
-          </div>
+          {account?.avatar ? (
+            <img className="avatar" src={account.avatar} alt="" draggable={false} />
+          ) : (
+            <div className="avatar">
+              {account ? account.username.slice(0, 1).toUpperCase() : <User size={16} />}
+            </div>
+          )}
           <div className="account-name">{account ? account.username : "Нет аккаунта"}</div>
         </button>
         <button

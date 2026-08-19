@@ -52,6 +52,8 @@ export interface Settings {
 export interface Account {
   id: string;
   kind: "offline" | "microsoft" | "gland";
+  /** Картинка предмета вместо аватарки — приходит с сервера при регистрации. */
+  avatar?: string | null;
   username: string;
   uuid: string;
 }

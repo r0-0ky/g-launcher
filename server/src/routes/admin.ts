@@ -388,8 +388,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     secured.get("/shop", async (request) => {
       const origin = originOf(request);
       return queries.allShopItems.all().map((item) => ({
-        ...item,
+        id: item.id,
+        kind: item.kind,
+        name: item.name,
+        price: item.price,
+        model: item.model,
+        rarity: item.rarity,
         visible: Boolean(item.visible),
+        sortOrder: item.sort_order,
         url: skinUrl(item.sha1, origin),
       }));
     });

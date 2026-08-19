@@ -104,6 +104,30 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await response.json()) as T;
 }
 
+export type Rarity = "green" | "blue" | "purple" | "legendary";
+
+/** Позиция витрины магазина. */
+export interface ShopItem {
+  id: number;
+  kind: "skin" | "cape";
+  name: string;
+  price: number;
+  model: "classic" | "slim";
+  rarity: Rarity;
+  visible: boolean;
+  sortOrder: number;
+  url: string;
+}
+
+export interface PlayerAccount {
+  id: string;
+  username: string | null;
+  telegramName: string | null;
+  coins: number;
+  banned: boolean;
+  createdAt: string;
+}
+
 export const api = {
   login: async (password: string) => {
     const data = await request<{ token: string }>("/login", {
@@ -137,6 +161,23 @@ export const api = {
     request<Mode>(`/modes/${id}/duplicate`, {
       method: "POST",
       body: JSON.stringify({ id: newId, name }),
+    }),
+
+  // --- Магазин ---
+  shop: () => request<ShopItem[]>("/shop"),
+  addShopItem: (form: FormData) =>
+    request<{ ok: true }>("/shop", { method: "POST", body: form }),
+  saveShopItem: (
+    id: number,
+    patch: { name?: string; price?: number; rarity?: Rarity; visible?: boolean; sortOrder?: number }
+  ) => request<{ ok: true }>(`/shop/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
+  deleteShopItem: (id: number) => request<{ ok: true }>(`/shop/${id}`, { method: "DELETE" }),
+
+  players: () => request<PlayerAccount[]>("/accounts"),
+  grantCoins: (id: string, delta: number, reason: string) =>
+    request<{ coins: number }>(`/accounts/${id}/coins`, {
+      method: "POST",
+      body: JSON.stringify({ delta, reason }),
     }),
 
   uploadFiles: (id: string, kind: ContentKind, files: FileList | File[]) => {

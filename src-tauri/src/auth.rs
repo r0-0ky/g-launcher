@@ -298,6 +298,7 @@ async fn complete_login(
         expires_at: now + expires_in,
         xuid,
         session: None,
+        avatar: None,
     })
 }
 

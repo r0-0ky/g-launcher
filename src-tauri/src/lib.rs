@@ -265,6 +265,8 @@ async fn active_account(state: &State<'_, AppState>) -> Result<Account> {
 
         let updated = Account {
             id: account.id.clone(),
+            // Токен игры аватарку не возвращает — оставляем прежнюю.
+            avatar: account.avatar.clone(),
             ..fresh
         };
         {
@@ -376,6 +378,7 @@ async fn gland_login_poll(state: State<'_, AppState>, token: String) -> Result<O
             Some(slot) => {
                 slot.session = Some(session.clone());
                 slot.username = profile.username.clone().unwrap_or_default();
+                slot.avatar = profile.avatar.clone();
                 slot.id.clone()
             }
             None => {
@@ -389,6 +392,7 @@ async fn gland_login_poll(state: State<'_, AppState>, token: String) -> Result<O
                     expires_at: 0,
                     xuid: None,
                     session: Some(session.clone()),
+                    avatar: profile.avatar.clone(),
                 };
                 let id = account.id.clone();
                 store.accounts.push(account);
