@@ -68,6 +68,12 @@ export function SkinPreview({
       viewer.controls.target.set(0, 5, 0);
       viewer.controls.update();
     }
+    // Крутить даём только вокруг вертикальной оси: наклон камеры вверх-вниз
+    // ломает кадр и модель начинает висеть под углом.
+    const polar = viewer.controls.getPolarAngle();
+    viewer.controls.minPolarAngle = polar;
+    viewer.controls.maxPolarAngle = polar;
+
     viewerRef.current = viewer;
 
     return () => {
