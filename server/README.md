@@ -131,6 +131,8 @@ docker compose up -d
 
 Готово. Теперь:
 
+- **Корень домена**: `https://launcher.example.com` — редирект на страницу загрузки,
+  туда попадают игроки
 - **Админка**: `https://launcher.example.com/admin`
 - **Ссылка для лаунчера** (её вставить в настройки лаунчера или в `DEFAULT_MANIFEST_URL`):
   `https://launcher.example.com/manifest.json`

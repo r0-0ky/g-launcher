@@ -45,7 +45,9 @@ if (existsSync(join(adminDist, "index.html"))) {
   app.log.warn("Админка не собрана: выполните npm run build");
 }
 
-app.get("/", async (_request, reply) => reply.redirect("/admin/"));
+// Корень домена — для игроков, а не для меня: отдаём страницу загрузки.
+// Админка остаётся по прямой ссылке /admin.
+app.get("/", async (_request, reply) => reply.redirect("/download"));
 
 if (!config.adminPassword) {
   app.log.warn("ADMIN_PASSWORD пуст — вход в админку работать не будет");
