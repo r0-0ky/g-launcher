@@ -28,7 +28,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBREQwNTAzNDg3MDEzREEKUldUYUUzQklBd1hkV25rb25tSFN0Tml1d1Q0d3F1amRoZkZFRnN4UDhDbERnakx6dmMza0xOd0kK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFMjk5NDY1RTU3Rjc0OTYKUldTV2RIL2xaWlFwVGdUeHNackpLQWhuYVhScjFMU1g2ZExGZHY0K3F5ZzlEZFVEL3QrTHdEbzIK",
       "endpoints": [
         "https://github.com/r0-0ky/g-launcher/releases/latest/download/latest.json"
       ]
