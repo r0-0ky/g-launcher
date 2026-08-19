@@ -721,7 +721,7 @@ const page = `<!doctype html>
   splash.addEventListener("click", roll);
   roll();
 
-  /* Пасхалка: двадцать нажатий на кнопку смены подписи включают ночной режим —
+  /* Пасхалка: двадцать нажатий на кнопку смены подписи включают 52 режим —
      другой фон и своя песня. Двадцать первое (или Esc) выключает обратно. */
   var SECRET_AT = 20;
   var secretHits = 0;
@@ -739,7 +739,7 @@ const page = `<!doctype html>
       }
       // Нажатие — это жест пользователя, поэтому автозапуск звука разрешён.
       theme.play().catch(function () { undefined; });
-      splash.textContent = "ночной режим";
+      splash.textContent = "52 режим";
     } else {
       if (theme) {
         theme.pause();
