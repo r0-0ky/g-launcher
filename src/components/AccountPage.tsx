@@ -20,14 +20,19 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
   // сессия протухла), аккаунт достаточно удалить из списка.
   const signedIn = accounts.some((account) => account.kind === "gland");
 
+  const glandAccount =
+    accounts.find((account) => account.id === activeId && account.kind === "gland") ?? null;
   // Аккаунт G Land без ника: играть с таким нельзя, поэтому просим выбрать.
-  const needsNickname = accounts.some(
-    (account) => account.id === activeId && account.kind === "gland" && !account.username
-  );
+  const needsNickname = Boolean(glandAccount) && !glandAccount?.username;
 
   const [error, setError] = useState<string | null>(null);
   const [glandWaiting, setGlandWaiting] = useState(false);
   const [glandNick, setGlandNick] = useState("");
+
+  // Поле открывается с текущим ником: менять его — обычное дело, а не заведение.
+  useEffect(() => {
+    setGlandNick(glandAccount?.username ?? "");
+  }, [glandAccount?.username]);
   const [library, setLibrary] = useState<Library | null>(null);
   const activeSkin = library?.skins.find((texture) => texture.active) ?? null;
   const activeCape = library?.capes.find((texture) => texture.active) ?? null;
@@ -80,8 +85,7 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
   async function saveGLandNick() {
     setError(null);
     try {
-      onChanged(await api.glandSetNickname(glandNick));
-      setGlandNick("");
+      onChanged(await api.glandSetNickname(glandNick.trim()));
     } catch (err) {
       setError(errorText(err));
     }
@@ -294,9 +298,9 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
           </>
         )}
 
-        {needsNickname && (
+        {glandAccount && (
           <label className="field">
-            <span>Выберите ник — его увидят на сервере</span>
+            <span>{needsNickname ? "Выберите ник — его увидят на сервере" : "Ник"}</span>
             <div className="row">
               <input
                 value={glandNick}
@@ -304,11 +308,20 @@ export function AccountPage({ accounts, activeId, onClose, onChanged }: Props) {
                 placeholder="Ник в игре"
                 maxLength={16}
               />
-              <Button variant="primary" onClick={saveGLandNick} disabled={!glandNick.trim()}>
+              <Button
+                variant="primary"
+                onClick={saveGLandNick}
+                disabled={
+                  !glandNick.trim() || glandNick.trim() === (glandAccount.username ?? "")
+                }
+              >
                 Сохранить
               </Button>
             </div>
-            <small>Менять можно когда угодно: прогресс на сервере привязан не к нику.</small>
+            <small>
+              От 3 до 16 знаков: латиница, цифры и подчёркивание. Менять можно когда
+              угодно — прогресс на сервере привязан не к нику.
+            </small>
           </label>
         )}
 
