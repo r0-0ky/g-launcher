@@ -50,6 +50,18 @@ async function fetchLatest(): Promise<Release> {
     `https://api.github.com/repos/${config.githubRepo}/releases/latest`,
     { headers }
   );
+  // 404 — это не поломка, а «релизов ещё не выпускали». Отдаём пустой список,
+  // иначе страница ругается сбоем на совершенно нормальном состоянии.
+  if (response.status === 404) {
+    const empty: Release = {
+      version: "",
+      publishedAt: null,
+      repo: config.githubRepo,
+      assets: { macos: [], windows: [], linux: [] },
+    };
+    cache = { at: Date.now(), value: empty };
+    return empty;
+  }
   if (!response.ok) {
     throw new Error(`GitHub ответил ${response.status}`);
   }
@@ -215,6 +227,7 @@ const page = `<!doctype html>
   .others .size { opacity: 0.6; white-space: nowrap; }
   .note { margin: 18px auto 0; max-width: 34em; font-size: 13px; line-height: 1.55; opacity: 0.8; }
   .error { color: var(--danger); font-weight: 700; }
+  .soon { margin: 0; font-weight: 700; font-size: 15px; opacity: 0.85; }
 
   .section-title {
     color: #f2fbff; text-shadow: 2px 2px 0 rgba(10, 40, 60, 0.45);
@@ -400,9 +413,23 @@ const page = `<!doctype html>
         all.hidden = false;
       }
 
+      var box = document.getElementById("primary");
+
+      // Релизов ещё не выпускали — это нормальное состояние, а не ошибка.
+      var total = ["macos", "windows", "linux"].reduce(function (n, os) {
+        return n + release.assets[os].length;
+      }, 0);
+      if (!release.version || !total) {
+        document.getElementById("version").textContent = "первый релиз ещё готовится";
+        var soon = document.createElement("p");
+        soon.className = "soon";
+        soon.textContent = "Сборки появятся здесь сразу после выпуска — страница подтянет их сама.";
+        box.appendChild(soon);
+        return;
+      }
+
       var mine = detect();
       var primary = release.assets[mine][0];
-      var box = document.getElementById("primary");
       if (primary) {
         var a = document.createElement("a");
         a.className = "primary";
