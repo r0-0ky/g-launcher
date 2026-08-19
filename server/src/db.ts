@@ -93,6 +93,26 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_sessions_account ON account_sessions(account_id);
+
+  -- Токен, с которым игра ходит к нам вместо серверов Mojang.
+  CREATE TABLE IF NOT EXISTS game_tokens (
+    access_token TEXT PRIMARY KEY,
+    client_token TEXT NOT NULL,
+    account_id   TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at   TEXT NOT NULL
+  );
+
+  -- Рукопожатие при входе на сервер: клиент говорит «я захожу», сервер через
+  -- секунду спрашивает «этот игрок заходил?». Записи живут считаные секунды.
+  CREATE TABLE IF NOT EXISTS join_records (
+    server_id  TEXT NOT NULL,
+    account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (server_id, account_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_game_tokens_account ON game_tokens(account_id);
 `);
 
 const columns = {
@@ -168,6 +188,31 @@ export const queries = {
   dropSession: db.prepare(`DELETE FROM account_sessions WHERE token = ?`),
   dropStaleSessions: db.prepare(
     `DELETE FROM account_sessions WHERE expires_at < datetime('now')`
+  ),
+
+  // --- Вход в саму игру ---
+  createGameToken: db.prepare(
+    `INSERT INTO game_tokens (access_token, client_token, account_id, expires_at)
+     VALUES (?, ?, ?, ?)`
+  ),
+  gameToken: db.prepare<[string], { access_token: string; client_token: string; account_id: string; expires_at: string }>(
+    `SELECT * FROM game_tokens WHERE access_token = ?`
+  ),
+  dropGameToken: db.prepare(`DELETE FROM game_tokens WHERE access_token = ?`),
+  dropGameTokensOf: db.prepare(`DELETE FROM game_tokens WHERE account_id = ?`),
+  dropStaleGameTokens: db.prepare(
+    `DELETE FROM game_tokens WHERE expires_at < datetime('now')`
+  ),
+
+  rememberJoin: db.prepare(
+    `INSERT INTO join_records (server_id, account_id) VALUES (?, ?)
+     ON CONFLICT (server_id, account_id) DO UPDATE SET created_at = datetime('now')`
+  ),
+  findJoin: db.prepare<[string, string], { created_at: string }>(
+    `SELECT created_at FROM join_records WHERE server_id = ? AND account_id = ?`
+  ),
+  dropStaleJoins: db.prepare(
+    `DELETE FROM join_records WHERE created_at < datetime('now', '-60 seconds')`
   ),
   fileById: db.prepare<[number], ModeFileRow>(`SELECT * FROM mode_files WHERE id = ?`),
   deleteFile: db.prepare(`DELETE FROM mode_files WHERE id = ?`),

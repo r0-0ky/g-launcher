@@ -12,6 +12,7 @@ import { accountRoutes } from "./routes/account.js";
 import { adminRoutes } from "./routes/admin.js";
 import { downloadRoutes } from "./routes/download.js";
 import { publicRoutes } from "./routes/public.js";
+import { yggdrasilRoutes } from "./routes/yggdrasil.js";
 import { setWebhook } from "./telegram.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -32,6 +33,8 @@ await app.register(publicRoutes);
 await app.register(downloadRoutes);
 await app.register(adminRoutes, { prefix: "/api" });
 await app.register(accountRoutes, { prefix: "/api" });
+// Свой Yggdrasil: этот адрес передаётся authlib-injector в клиент и на сервер.
+await app.register(yggdrasilRoutes, { prefix: "/auth" });
 
 // Собранная админка отдаётся тем же процессом — отдельный веб-сервер не нужен.
 if (existsSync(join(adminDist, "index.html"))) {
