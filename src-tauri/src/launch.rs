@@ -204,9 +204,22 @@ pub fn build_command(
         }
     }
 
+    // Forge и NeoForge перечисляют в ignoreList то, что не должно попасть на
+    // module path, и среди прочего там стоит `${version_name}.jar`. Ждут они
+    // имя ванильного jar — именно он лежит на classpath. Подставишь составной
+    // id (neoforge-20.2.93) — ванильный jar не попадёт в исключения, окажется
+    // на module path отдельным модулем и столкнётся с пропатченным minecraft:
+    // «Module minecraft contains package net.minecraft.client.main, module
+    // _1._20._2 exports package net.minecraft.client.main to minecraft».
+    // В игровых аргументах `--version` при этом должен остаться прежним.
+    let mut jvm_vars = vars.clone();
+    if let Some(stem) = prepared.client_jar.file_stem() {
+        jvm_vars.insert("version_name".into(), stem.to_string_lossy().to_string());
+    }
+
     match version.arguments.as_ref() {
         Some(arguments) if !arguments.jvm.is_empty() => {
-            args.extend(collect_args(&arguments.jvm, &vars));
+            args.extend(collect_args(&arguments.jvm, &jvm_vars));
         }
         _ => {
             args.push(format!("-Djava.library.path={}", vars["natives_directory"]));
