@@ -158,8 +158,13 @@ const page = `<!doctype html>
     --sand: #f7e3ad; --danger: #b3392a;
     /* Пиксельная фаска: светлая грань сверху-слева, тёмная снизу-справа. */
     --px: 3px;
-    --stone: #8f8f8f; --stone-hover: #a8a8a8; --stone-hi: #cdcdcd; --stone-lo: #4c4c4c;
-    --panel: #c6c6c6; --panel-ink: #2b2b30; --outline: #16161a;
+    --stone: #c9c9cd; --stone-hover: #dcdce0; --stone-hi: #ffffff; --stone-lo: #7a7a82;
+    --panel: #d0d0d3; --panel-ink: #2b2b30; --outline: #3f3f46;
+    /* Жёсткая тень-подложка: она и делает элемент выпуклым. */
+    --drop: 3px 3px 0 rgba(0, 0, 0, 0.35);
+    --go: #4b9c2e; --go-deep: #3c8527; --go-hi: #63b843;
+    /* Нижняя грань вдавленных поверхностей: белая била бы по глазам на тёмном. */
+    --sunk-hi: #8f8f96;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -236,9 +241,10 @@ const page = `<!doctype html>
   .card {
     background: var(--panel);
     box-shadow:
-      inset var(--px) var(--px) 0 0 #efefef,
+      inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-      0 0 0 var(--px) var(--outline);
+      0 0 0 var(--px) var(--outline),
+      var(--drop);
   }
   .hero { padding: 30px 28px 26px; text-align: center; }
   .mark { font-size: 44px; line-height: 1; animation: sway 7s ease-in-out infinite; display: inline-block; }
@@ -246,8 +252,7 @@ const page = `<!doctype html>
   .tagline { margin: 0 auto 14px; max-width: 30em; font-size: 15px; line-height: 1.5; color: #4a4a52; }
   .version {
     display: inline-block; font-weight: 700; font-size: 13px; margin-bottom: 20px;
-    padding: 5px 14px; background: var(--stone); color: #fff;
-    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+    padding: 5px 14px; background: var(--stone); color: var(--panel-ink);
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
@@ -256,14 +261,14 @@ const page = `<!doctype html>
   a.primary {
     display: block; max-width: 420px; margin: 0 auto; text-align: center;
     text-decoration: none; color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
-    background: linear-gradient(180deg, var(--grass), var(--grass-deep));
+    background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
     padding: 16px 24px; font-size: 19px; font-weight: 700;
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
       0 0 0 var(--px) var(--outline);
   }
-  a.primary:hover { background: linear-gradient(180deg, #a7e765, var(--grass)); }
+  a.primary:hover { background: linear-gradient(180deg, #79cc53 0 4px, var(--go-hi) 4px, var(--go)); }
   /* Нажатие вдавливает кнопку: фаска переворачивается. */
   a.primary:active {
     box-shadow:
@@ -271,6 +276,36 @@ const page = `<!doctype html>
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
       0 0 0 var(--px) var(--outline);
   }
+  /* Вкладки систем: своя открыта сразу, остальные рядом. */
+  .os-tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+  .os-tab {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    min-width: 118px; padding: 12px 14px; font: inherit; cursor: pointer;
+    background: var(--stone); color: var(--panel-ink);
+    border: none; border-radius: 0;
+    box-shadow:
+      inset var(--px) var(--px) 0 0 var(--stone-hi),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+      0 0 0 var(--px) var(--outline),
+      var(--drop);
+  }
+  .os-tab:hover:not(:disabled):not(.active) { background: var(--stone-hover); }
+  .os-tab.active {
+    background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
+    color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
+    /* Выбранная вкладка вдавлена — как нажатая клавиша. */
+    box-shadow:
+      inset var(--px) var(--px) 0 0 rgba(0, 0, 0, 0.25),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 rgba(255, 255, 255, 0.35),
+      0 0 0 var(--px) var(--outline);
+  }
+  .os-tab:disabled { background: #9a9aa0; color: #e2e2e6; cursor: not-allowed; box-shadow: 0 0 0 var(--px) var(--outline); }
+  .os-ico { width: 30px; height: 30px; fill: currentColor; }
+  .os-ico .dim { fill: rgba(0, 0, 0, 0.5); }
+  .os-ico .beak { fill: var(--sand); }
+  .os-name { font-size: 15px; }
+  .os-count { font-size: 11px; opacity: 0.85; }
+  .picked { margin-top: 10px; font-size: 13px; color: #4a4a52; }
   .others { margin-top: 20px; border-top: var(--px) solid var(--stone-lo); padding-top: 14px; text-align: left; }
   .others h2 { font-size: 14px; margin: 0 0 8px; color: #4a4a52; text-align: center; }
   /* Строки — как слоты инвентаря. */
@@ -280,7 +315,7 @@ const page = `<!doctype html>
     background: #6f6f6f; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.5);
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-lo),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
       0 0 0 var(--px) var(--outline);
   }
   .others a:hover { background: var(--stone-hover); }
@@ -297,9 +332,10 @@ const page = `<!doctype html>
   .feat {
     background: var(--panel); padding: 16px 18px;
     box-shadow:
-      inset var(--px) var(--px) 0 0 #efefef,
+      inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-      0 0 0 var(--px) var(--outline);
+      0 0 0 var(--px) var(--outline),
+      var(--drop);
   }
   .feat .ico { font-size: 26px; line-height: 1; }
   .feat h3 { margin: 8px 0 6px; font-size: 16px; }
@@ -312,7 +348,7 @@ const page = `<!doctype html>
   .num {
     flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center;
     font-weight: 700; color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
-    background: linear-gradient(180deg, var(--grass), var(--grass-deep));
+    background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
     box-shadow:
       inset var(--px) var(--px) 0 0 var(--stone-hi),
       inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
@@ -361,11 +397,8 @@ const page = `<!doctype html>
       шейдеры и Java приезжают сами. Ничего вручную раскладывать по папкам не надо.
     </p>
     <div class="version" id="version">загружаем…</div>
-    <div id="primary"></div>
-    <div class="others" id="others" hidden>
-      <h2>Другие системы</h2>
-      <div id="others-list"></div>
-    </div>
+    <div class="os-tabs" id="os-tabs" role="tablist" hidden></div>
+    <div class="os-panel" id="os-panel"></div>
     <p class="note">
       Лаунчер обновляется сам: при запуске проверяет новую версию, скачивает,
       сверяет подпись и ставит в один клик. Возвращаться сюда после каждого
@@ -433,6 +466,41 @@ const page = `<!doctype html>
 
 <script>
   var NAMES = { macos: "macOS", windows: "Windows", linux: "Linux" };
+  var ORDER = ["macos", "windows", "linux"];
+
+  /* Иконки нарисованы прямоугольниками по сетке — чтобы совпадать с пиксельным
+     интерфейсом лаунчера. Цвет наследуется от вкладки. */
+  var ICONS = {
+    macos:
+      '<svg class="os-ico" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">' +
+      '<rect x="5" y="0" width="2" height="1"/><rect x="4" y="1" width="2" height="1"/>' +
+      '<rect x="2" y="2" width="5" height="1"/><rect x="1" y="3" width="7" height="3"/>' +
+      '<rect x="1" y="6" width="3" height="1"/><rect x="5" y="6" width="3" height="1"/>' +
+      '<rect x="2" y="7" width="2" height="1"/><rect x="5" y="7" width="2" height="1"/></svg>',
+    windows:
+      '<svg class="os-ico" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">' +
+      '<rect x="0" y="0" width="4" height="4"/><rect x="5" y="0" width="4" height="4"/>' +
+      '<rect x="0" y="5" width="4" height="4"/><rect x="5" y="5" width="4" height="4"/></svg>',
+    // Пингвин: тёмная спина, светлый живот, жёлтые клюв и лапы — иначе
+    // одноцветный силуэт читается как привидение.
+    linux:
+      '<svg class="os-ico" viewBox="0 0 9 9" shape-rendering="crispEdges" aria-hidden="true">' +
+      '<rect class="dim" x="3" y="0" width="3" height="1"/><rect class="dim" x="2" y="1" width="5" height="2"/>' +
+      '<rect x="3" y="1" width="3" height="1"/>' +
+      '<rect class="dim" x="3" y="1" width="1" height="1"/><rect class="dim" x="5" y="1" width="1" height="1"/>' +
+      '<rect class="beak" x="4" y="2" width="1" height="1"/>' +
+      '<rect class="dim" x="2" y="3" width="5" height="5"/>' +
+      '<rect class="dim" x="1" y="4" width="1" height="3"/><rect class="dim" x="7" y="4" width="1" height="3"/>' +
+      '<rect x="3" y="4" width="3" height="3"/>' +
+      '<rect class="beak" x="1" y="8" width="3" height="1"/><rect class="beak" x="5" y="8" width="3" height="1"/></svg>',
+  };
+
+  function plural(n) {
+    var tail = n % 100 > 4 && n % 100 < 21 ? 0 : n % 10;
+    if (tail === 1) return n + " файл";
+    if (tail > 1 && tail < 5) return n + " файла";
+    return n + " файлов";
+  }
 
   function detect() {
     var ua = navigator.userAgent;
@@ -478,47 +546,90 @@ const page = `<!doctype html>
         all.hidden = false;
       }
 
-      var box = document.getElementById("primary");
+      var tabs = document.getElementById("os-tabs");
+      var panel = document.getElementById("os-panel");
 
       // Релизов ещё не выпускали — это нормальное состояние, а не ошибка.
-      var total = ["macos", "windows", "linux"].reduce(function (n, os) {
-        return n + release.assets[os].length;
-      }, 0);
+      var total = ORDER.reduce(function (n, os) { return n + release.assets[os].length; }, 0);
       if (!release.version || !total) {
         document.getElementById("version").textContent = "первый релиз ещё готовится";
         var soon = document.createElement("p");
         soon.className = "soon";
         soon.textContent = "Сборки появятся здесь сразу после выпуска — страница подтянет их сама.";
-        box.appendChild(soon);
+        panel.appendChild(soon);
         return;
       }
 
+      // Открытой оказывается вкладка системы посетителя. Если под неё сборок
+      // в релизе нет — открываем первую непустую, чтобы страница не выглядела
+      // сломанной.
       var mine = detect();
-      var primary = release.assets[mine][0];
-      if (primary) {
-        var a = document.createElement("a");
-        a.className = "primary";
-        a.href = primary.url;
-        a.textContent = "Скачать для " + NAMES[mine];
-        box.appendChild(a);
-      } else {
-        var warn = document.createElement("p");
-        warn.className = "error";
-        warn.textContent = "Для " + NAMES[mine] + " сборки в этом релизе нет — посмотри другие системы ниже.";
-        box.appendChild(warn);
+      if (!release.assets[mine].length) {
+        mine = ORDER.filter(function (os) { return release.assets[os].length; })[0];
       }
 
-      var rest = [];
-      ["macos", "windows", "linux"].forEach(function (os) {
-        release.assets[os].forEach(function (asset) {
-          if (asset !== primary) rest.push(asset);
-        });
+      tabs.hidden = false;
+      ORDER.forEach(function (os) {
+        var files = release.assets[os];
+        var tab = document.createElement("button");
+        tab.className = "os-tab";
+        tab.type = "button";
+        tab.setAttribute("role", "tab");
+        tab.dataset.os = os;
+        tab.disabled = !files.length;
+        tab.innerHTML = ICONS[os];
+
+        var name = document.createElement("span");
+        name.className = "os-name";
+        name.textContent = NAMES[os];
+        tab.appendChild(name);
+
+        var count = document.createElement("span");
+        count.className = "os-count";
+        count.textContent = files.length ? plural(files.length) : "нет сборки";
+        tab.appendChild(count);
+
+        tab.addEventListener("click", function () { select(os); });
+        tabs.appendChild(tab);
       });
-      if (rest.length) {
-        document.getElementById("others").hidden = false;
-        var list = document.getElementById("others-list");
-        rest.forEach(function (asset) { list.appendChild(link(asset)); });
+
+      function select(os) {
+        var files = release.assets[os];
+        if (!files.length) return;
+
+        Array.prototype.forEach.call(tabs.children, function (tab) {
+          var on = tab.dataset.os === os;
+          tab.setAttribute("aria-selected", on ? "true" : "false");
+          tab.classList.toggle("active", on);
+        });
+
+        panel.textContent = "";
+
+        // Первый файл — рекомендованный: под macOS это .dmg, под Windows .exe.
+        var best = files[0];
+        var main = document.createElement("a");
+        main.className = "primary";
+        main.href = best.url;
+        main.textContent = "Скачать для " + NAMES[os];
+        panel.appendChild(main);
+
+        var hint = document.createElement("div");
+        hint.className = "picked";
+        hint.textContent = best.name + " · " + size(best.size);
+        panel.appendChild(hint);
+
+        if (files.length > 1) {
+          var more = document.createElement("div");
+          more.className = "others";
+          var title = document.createElement("h2");
+          title.textContent = "Другие форматы для " + NAMES[os];
+          more.appendChild(title);
+          files.slice(1).forEach(function (asset) { more.appendChild(link(asset)); });
+          panel.appendChild(more);
+        }
       }
+
+      select(mine);
     })
     .catch(function () {
       var box = document.getElementById("version");

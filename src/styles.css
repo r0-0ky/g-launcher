@@ -42,14 +42,22 @@
      фаски. Светлая грань сверху-слева, тёмная снизу-справа, чёрный контур
      снаружи. Толщина одна на весь интерфейс, поэтому вынесена в переменную. */
   --px: 3px;
-  --stone: #8f8f8f;
-  --stone-hover: #a8a8a8;
-  --stone-hi: #cdcdcd;
-  --stone-lo: #4c4c4c;
-  --panel: #c6c6c6;
+  --stone: #c9c9cd;
+  --stone-hover: #dcdce0;
+  --stone-hi: #ffffff;
+  --stone-lo: #7a7a82;
+  --panel: #d0d0d3;
   --panel-ink: #2b2b30;
   --slot: #7d7d7d;
-  --outline: #16161a;
+  --outline: #3f3f46;
+  /* Жёсткая тень-подложка: именно она делает элемент «выпуклым». */
+  --drop: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  /* Нижняя грань вдавленных поверхностей: белая била бы по глазам на тёмном. */
+  --sunk-hi: #8f8f96;
+  /* Зелёный кнопки действия — глубокий, как в игровом меню. */
+  --go: #4b9c2e;
+  --go-deep: #3c8527;
+  --go-hi: #63b843;
   color-scheme: light;
 }
 
@@ -1061,7 +1069,8 @@ h2,
   box-shadow:
     inset var(--px) var(--px) 0 0 var(--stone-hi),
     inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-    0 0 0 var(--px) var(--outline);
+    0 0 0 var(--px) var(--outline),
+    var(--drop);
 }
 
 /* --- Вдавленные: поля ввода, слоты, дорожка прогресса --- */
@@ -1075,7 +1084,7 @@ input,
   border-radius: 0;
   box-shadow:
     inset var(--px) var(--px) 0 0 var(--stone-lo),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
     0 0 0 var(--px) var(--outline);
 }
 
@@ -1104,9 +1113,10 @@ input,
   border: none;
   border-radius: 0;
   box-shadow:
-    inset var(--px) var(--px) 0 0 #efefef,
+    inset var(--px) var(--px) 0 0 var(--stone-hi),
     inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-    0 0 0 var(--px) var(--outline);
+    0 0 0 var(--px) var(--outline),
+    var(--drop);
 }
 
 .hero {
@@ -1131,13 +1141,16 @@ button {
   letter-spacing: 0.2px;
 }
 
+/* Второстепенные кнопки: светлый камень, тёмная надпись. */
 .ghost-button,
 .icon-button,
 .music-toggle,
-.account-button {
+.account-button,
+.chip,
+.update-banner {
   background: var(--stone);
-  color: #ffffff;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  color: var(--panel-ink);
+  text-shadow: none;
 }
 
 .ghost-button:not(:disabled):hover,
@@ -1149,44 +1162,41 @@ button {
   transform: none;
 }
 
+/* Нажатие вдавливает: фаска переворачивается, подложка уходит. */
 .ghost-button:not(:disabled):active,
 .icon-button:active,
-.music-toggle:active {
+.music-toggle:active,
+.play-button:not(:disabled):active {
+  transform: none;
   box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-lo),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+    inset var(--px) var(--px) 0 0 rgba(0, 0, 0, 0.25),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 rgba(255, 255, 255, 0.4),
     0 0 0 var(--px) var(--outline);
 }
 
 .ghost-button:disabled,
 .play-button:disabled {
-  background: #6b6b6b;
-  color: #b9b9b9;
+  background: #9a9aa0;
+  color: #d8d8dc;
+  text-shadow: none;
 }
 
 .play-button {
-  background: linear-gradient(180deg, var(--grass), var(--grass-deep));
+  background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
   color: #ffffff;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45);
   font-size: 16px;
 }
 
 .play-button:not(:disabled):hover {
-  background: linear-gradient(180deg, #a7e765, var(--grass));
+  background: linear-gradient(180deg, #79cc53 0 4px, var(--go-hi) 4px, var(--go));
   transform: none;
-}
-
-.play-button:not(:disabled):active {
-  transform: none;
-  box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-lo),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
-    0 0 0 var(--px) var(--outline);
 }
 
 .ghost-button.danger {
-  background: #a63a2a;
+  background: #b3392a;
   color: #ffe8e2;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
 }
 
 .link-button {
@@ -1221,7 +1231,7 @@ button {
 }
 
 .mode-item.active {
-  background: linear-gradient(180deg, var(--grass-deep), #4a8a1e);
+  background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
   color: #ffffff;
 }
 
@@ -1273,10 +1283,9 @@ button {
 /* --- Метки, статус, прогресс --- */
 
 .chip {
-  background: var(--stone);
-  color: #ffffff;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
   border-radius: 0;
+  font-size: 12px;
+  padding: 4px 12px;
 }
 
 .chip:nth-child(3n),
@@ -1304,7 +1313,7 @@ button {
 
 .progress-bar {
   /* Как шкала опыта: ровная зелёная заливка с пиксельной верхней гранью. */
-  background: linear-gradient(180deg, #9ae84f 0 6px, var(--grass-deep) 6px);
+  background: linear-gradient(180deg, var(--go-hi) 0 6px, var(--go) 6px, var(--go-deep));
   transition: width 0.15s steps(12);
 }
 
@@ -1328,7 +1337,7 @@ input:focus {
   outline: none;
   box-shadow:
     inset var(--px) var(--px) 0 0 var(--stone-lo),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-hi),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
     0 0 0 var(--px) #ffffff;
 }
 
@@ -1346,7 +1355,7 @@ input:focus {
 }
 
 .account-row.active {
-  background: linear-gradient(180deg, var(--grass-deep), #4a8a1e);
+  background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
 }
 
 .device-code .code {
@@ -1360,9 +1369,8 @@ input:focus {
 /* --- Плашки --- */
 
 .update-banner {
-  background: var(--stone);
-  color: #ffffff;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+  background: linear-gradient(180deg, #f2e39a 0 4px, #e6d071 4px, #d3ba55);
+  color: var(--panel-ink);
 }
 
 /* Строки лога в консоли тоже носят класс .error — их эта плашка не касается. */
