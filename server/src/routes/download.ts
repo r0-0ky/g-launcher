@@ -232,7 +232,8 @@ const page = `<!doctype html>
   .bg { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
   .bg-dim {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.68));
+    /* Лёгкая виньетка: в игре панорама не гасится, контраст держат сами кнопки. */
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.38));
   }
   /* Лучи света: остаются и поверх видео, и поверх воды. */
   .bg-dim::after {
@@ -270,51 +271,71 @@ const page = `<!doctype html>
     display: flex; align-items: center; justify-content: center; padding: 56px 16px 72px;
   }
   .screen { width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #screen-menu .menu { width: min(420px, 100%); }
   .screen-title { margin: 0 0 4px; font-size: 26px; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65); }
 
-  .logo-wrap { position: relative; text-align: center; margin-bottom: 18px; }
+  /* Отступ справа — место для жёлтой подписи, чтобы она не легла на подзаголовок. */
+  .logo-wrap { position: relative; text-align: center; margin-bottom: 18px; padding-right: 120px; }
   .logo {
-    margin: 0; font-size: clamp(38px, 9vw, 68px); line-height: 0.95; color: #ffffff;
-    text-shadow: 5px 5px 0 rgba(0, 0, 0, 0.6);
+    margin: 0; font-size: clamp(40px, 10vw, 78px); line-height: 0.95;
+    /* Каменные буквы: заливка + толстая обводка под ней + жёсткий вынос вниз-вправо. */
+    color: #c9c9cd;
+    -webkit-text-stroke: 5px #1c1c20;
+    paint-order: stroke fill;
+    text-shadow: 6px 6px 0 rgba(0, 0, 0, 0.55);
   }
-  .logo .sub { display: block; font-size: 0.52em; color: #d8f4ff; }
+  .logo .sub {
+    display: block; font-size: 0.42em; color: #e8e8ec; letter-spacing: 2px;
+    -webkit-text-stroke: 4px #1c1c20;
+  }
   /* Жёлтая подпись под углом — как в титульном экране игры. */
   .splash {
-    position: absolute; right: -76px; bottom: 34px; transform: rotate(-16deg);
+    position: absolute; right: -6px; bottom: 26px; max-width: 150px; text-align: center; line-height: 1.15;
+    transform: rotate(-16deg);
     color: var(--splash); font-size: 17px; cursor: pointer; user-select: none;
     text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55); animation: splash-beat 0.75s ease-in-out infinite alternate;
   }
   @keyframes splash-beat { from { transform: rotate(-16deg) scale(1); } to { transform: rotate(-16deg) scale(1.09); } }
 
-  .menu { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-  .row2 { display: flex; gap: 10px; }
+  .menu { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .row2 { display: flex; gap: 8px; }
   .row2 .mc-btn { flex: 1; }
 
   /* --- Кнопка меню --- */
+  /* Кнопка меню: тёмный камень, белая надпись с чёрной тенью, тонкая светлая
+     грань сверху и тёмная снизу. Наведение — как в игре: подсветка и белая рамка. */
   .mc-btn {
-    display: block; width: 100%; padding: 14px 18px; font-size: 17px; text-align: center;
+    display: block; width: 100%; padding: 10px 16px; font-size: 17px; text-align: center;
     text-decoration: none; cursor: pointer; border: none; border-radius: 0;
-    background: var(--stone); color: var(--panel-ink);
+    background: linear-gradient(180deg, #7b7b7b, #666668);
+    color: #ffffff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.75);
     box-shadow:
-      inset var(--px) var(--px) 0 0 var(--stone-hi),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-      0 0 0 var(--px) var(--outline),
+      inset 0 2px 0 0 rgba(255, 255, 255, 0.28),
+      inset 0 -2px 0 0 rgba(0, 0, 0, 0.35),
+      0 0 0 2px #1c1c20,
       var(--drop);
   }
-  .mc-btn:hover:not(:disabled) { background: var(--stone-hover); }
-  /* Нажатие вдавливает: фаска переворачивается, подложка уходит. */
+  .mc-btn:hover:not(:disabled) {
+    background: linear-gradient(180deg, #8fa1c8, #6f80a8);
+    box-shadow:
+      inset 0 0 0 2px #ffffff,
+      inset 0 2px 0 2px rgba(255, 255, 255, 0.25),
+      0 0 0 2px #1c1c20,
+      var(--drop);
+  }
   .mc-btn:active:not(:disabled) {
     box-shadow:
-      inset var(--px) var(--px) 0 0 rgba(0, 0, 0, 0.25),
-      inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 rgba(255, 255, 255, 0.4),
-      0 0 0 var(--px) var(--outline);
+      inset 0 2px 0 0 rgba(0, 0, 0, 0.35),
+      inset 0 -2px 0 0 rgba(255, 255, 255, 0.2),
+      0 0 0 2px #1c1c20;
   }
   .mc-btn.go {
-    background: linear-gradient(180deg, var(--go-hi) 0 4px, var(--go) 4px, var(--go-deep));
-    color: #ffffff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.45); font-size: 19px; padding: 16px 18px;
+    background: linear-gradient(180deg, var(--go-hi) 0 3px, var(--go) 3px, var(--go-deep));
   }
-  .mc-btn.go:hover { background: linear-gradient(180deg, #79cc53 0 4px, var(--go-hi) 4px, var(--go)); }
-  .mc-btn:disabled { background: #9a9aa0; color: #e2e2e6; cursor: not-allowed; }
+  .mc-btn.go:hover { background: linear-gradient(180deg, #79cc53 0 3px, var(--go-hi) 3px, var(--go)); }
+  .mc-btn:disabled { background: #56565a; color: #a6a6ac; cursor: not-allowed; }
+  /* Квадратные кнопки по краям нижнего ряда — как язык и специальные возможности. */
+  .mc-btn.square { width: 42px; flex: 0 0 42px; padding: 10px 0; font-size: 18px; }
 
   /* --- Панель содержимого --- */
   .panel {
@@ -402,7 +423,8 @@ const page = `<!doctype html>
   .corner.right { right: 10px; }
 
   @media (max-width: 560px) {
-    .splash { right: -8px; bottom: -30px; font-size: 14px; }
+    .logo-wrap { padding-right: 0; }
+    .splash { right: -4px; bottom: -34px; font-size: 13px; max-width: 130px; }
     .title { padding: 40px 12px 64px; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -426,7 +448,12 @@ const page = `<!doctype html>
       <button class="mc-btn go" data-go="download">Скачать</button>
       <button class="mc-btn" data-go="about">Что внутри</button>
       <button class="mc-btn" data-go="start">Как начать</button>
-      <a class="mc-btn" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
+      <div class="row2">
+        <button class="mc-btn square" id="bubbles-toggle" title="Пузырьки">🫧</button>
+        <a class="mc-btn" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
+        <a class="mc-btn" id="repo-link" href="https://github.com" target="_blank" rel="noreferrer">Исходники</a>
+        <button class="mc-btn square" id="splash-roll" title="Сменить подпись">✨</button>
+      </div>
     </div>
   </section>
 
@@ -593,7 +620,15 @@ const page = `<!doctype html>
     splash.textContent = next === splash.textContent ? SPLASHES[0] : next;
   }
   splash.addEventListener("click", roll);
+  document.getElementById("splash-roll").addEventListener("click", roll);
   roll();
+
+  /* Пузырьки можно выключить — кнопка в углу нижнего ряда. */
+  document.getElementById("bubbles-toggle").addEventListener("click", function () {
+    var layer = document.getElementById("bubbles");
+    layer.hidden = !layer.hidden;
+    this.textContent = layer.hidden ? "💤" : "🫧";
+  });
 
   /* --- Фон-видео. Нет файла — остаётся вода. --- */
   (function () {
@@ -647,6 +682,7 @@ const page = `<!doctype html>
       if (release.repo) {
         document.getElementById("all-releases").href =
           "https://github.com/" + release.repo + "/releases";
+        document.getElementById("repo-link").href = "https://github.com/" + release.repo;
       }
 
       // Релизов ещё не выпускали — это нормальное состояние, а не ошибка.
