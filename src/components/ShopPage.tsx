@@ -46,6 +46,17 @@ export function ShopPage({ onBought }: Props) {
     void reload();
   }, []);
 
+  // Из просмотра вещи выходим по Escape или щелчком мимо неё.
+  useEffect(() => {
+    if (picked === null) return;
+
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPicked(null);
+    };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [picked]);
+
   async function buy(id: number) {
     setBusy(id);
     setError(null);
@@ -94,7 +105,13 @@ export function ShopPage({ onBought }: Props) {
       )}
 
       {shown && (
-        <div className={`shop-detail rarity-${shown.rarity}`}>
+        <div
+          className={`shop-detail rarity-${shown.rarity}`}
+          onClick={(event) => {
+            // Клик мимо вещи — возврат на витрину: отдельной кнопки нет.
+            if (event.target === event.currentTarget) setPicked(null);
+          }}
+        >
           <div className="shop-detail-info">
             <h3>{shown.name}</h3>
             <span className="shop-card-price">
@@ -120,9 +137,6 @@ export function ShopPage({ onBought }: Props) {
                   {busy === shown.id ? "Покупаем…" : "Купить"}
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => setPicked(null)}>
-                Назад
-              </Button>
             </div>
           </div>
 
