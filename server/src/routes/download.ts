@@ -525,6 +525,7 @@ const page = `<!doctype html>
       <div class="row2">
         <button class="Button Button_secondary square" id="bubbles-toggle" title="Пузырьки" aria-label="Пузырьки"><i class="bubble-ico"></i></button>
         <a class="Button Button_secondary" id="all-releases" href="https://github.com" target="_blank" rel="noreferrer">Все версии</a>
+        <a class="Button Button_secondary" href="https://www.sbmania.net/" target="_blank" rel="noreferrer">Боб</a>
         <button class="Button Button_secondary square" id="splash-roll" title="Сменить подпись" aria-label="Сменить подпись"><svg class="ico small" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path d="M11 1h2v4h-2zm0 22h2v-4h-2zM9 5h2v4H9zm0 14h2v-4H9zm4-14h2v4h-2zm0 14h2v-4h-2zM5 9h4v2H5zm14 0h-4v2h4zM1 11h4v2H1zm22 0h-4v2h4zM5 13h4v2H5zm14 0h-4v2h4zm0-12h2v6h-2z"/><path d="M17 3h6v2h-6zM3 17h2v2H3zm-2 2h2v2H1zm2 2h2v2H3zm2-2h2v2H5z"/></svg></button>
       </div>
     </div>
