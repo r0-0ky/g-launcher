@@ -30,19 +30,13 @@ const SPARKS = Array.from({ length: 18 }, (_, index) => {
 });
 
 export function PurchaseReveal({ item, textureId, wearing, onClose }: Props) {
-  // Первые полсекунды вещь крутится волчком, потом успокаивается.
-  const [speed, setSpeed] = useState(14);
   const [burst, setBurst] = useState(false);
   const [worn, setWorn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const spin = window.setTimeout(() => setSpeed(1.6), 900);
-    const flash = window.setTimeout(() => setBurst(true), 420);
-    return () => {
-      window.clearTimeout(spin);
-      window.clearTimeout(flash);
-    };
+    const flash = window.setTimeout(() => setBurst(true), 700);
+    return () => window.clearTimeout(flash);
   }, []);
 
   async function wear() {
@@ -65,10 +59,10 @@ export function PurchaseReveal({ item, textureId, wearing, onClose }: Props) {
             model={item.kind === "cape" ? (wearing?.model ?? "classic") : item.model}
             width={300}
             height={400}
-            rotate
-            spinSpeed={speed}
             locked
             pose
+            reveal
+            angle={item.kind === "cape" ? 2.4 : 0}
           />
         </div>
 

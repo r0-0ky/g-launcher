@@ -14,8 +14,8 @@ interface Props {
   height?: number;
   /** Модель сама поворачивается — так на витрине видно и спину, и плащ. */
   rotate?: boolean;
-  /** Скорость этого вращения: меняется на лету, без пересоздания сцены. */
-  spinSpeed?: number;
+  /** Показ покупки: раскрутить волчком и остановить строго на нужном угле. */
+  reveal?: boolean;
   /** Мышью крутить нельзя: на маленьких плитках это только мешает. */
   locked?: boolean;
   /** Кадр по пояс: на витрине важно лицо и торс, а не ботинки. */
@@ -33,7 +33,7 @@ export function SkinPreview({
   width = 180,
   height = 260,
   rotate = false,
-  spinSpeed = 1.2,
+  reveal = false,
   locked = false,
   bust = false,
   angle = 0,
@@ -53,7 +53,7 @@ export function SkinPreview({
     viewer.controls.enablePan = false;
     viewer.controls.enableRotate = !locked;
     viewer.autoRotate = rotate;
-    viewer.autoRotateSpeed = spinSpeed;
+    viewer.autoRotateSpeed = 1.2;
     viewer.zoom = bust ? 1.45 : 0.85;
     viewer.playerWrapper.rotation.y = angle;
 
@@ -87,10 +87,27 @@ export function SkinPreview({
     };
   }, [width, height, rotate, locked, bust, angle, pose]);
 
-  // Скорость крутим отдельно: пересоздавать сцену ради неё незачем.
+  // Раскрутка при покупке: несколько быстрых оборотов, которые тормозят и
+  // замирают ровно на заданном угле — чтобы вещь осталась стоять лицом.
   useEffect(() => {
-    if (viewerRef.current) viewerRef.current.autoRotateSpeed = spinSpeed;
-  }, [spinSpeed]);
+    const viewer = viewerRef.current;
+    if (!reveal || !viewer) return;
+
+    const SPINS = 6;
+    const MS = 2600;
+    const started = performance.now();
+    let frame = 0;
+
+    const tick = (now: number) => {
+      const time = Math.min(1, (now - started) / MS);
+      const eased = 1 - Math.pow(1 - time, 3);
+      viewer.playerWrapper.rotation.y = angle + (1 - eased) * SPINS * Math.PI * 2;
+      if (time < 1) frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [reveal, angle]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
