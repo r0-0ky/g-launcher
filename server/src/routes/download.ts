@@ -377,10 +377,10 @@ const page = `<!doctype html>
   .screen-title { margin: 0 0 4px; font-size: 26px; text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.65); }
 
   /* Логотип по центру, подпись цепляется к его правому нижнему углу. */
-  .logo-wrap { position: relative; display: inline-block; margin-bottom: 20px; }
+  .logo-wrap { position: relative; display: inline-block; margin-bottom: 6px; }
   .logo {
     display: block;
-    width: min(460px, 84vw);
+    width: min(540px, 88vw);
     height: auto;
     image-rendering: pixelated;
     filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, 0.45));
@@ -501,9 +501,9 @@ const page = `<!doctype html>
 
   @media (max-width: 560px) {
     .title { padding: 28px 10px 52px; }
-    .logo { width: 78vw; }
+    .logo { width: 86vw; }
     .splash { right: -4px; bottom: -18px; font-size: 12px; max-width: 108px; }
-    .logo-wrap { margin-bottom: 26px; }
+    .logo-wrap { margin-bottom: 12px; }
     .screen { gap: 10px; }
     .screen-title { font-size: 20px; }
     .Button { padding: 12px 12px; font-size: 15px; }
