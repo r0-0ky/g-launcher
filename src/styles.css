@@ -1635,70 +1635,91 @@ img.avatar {
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  /* Ширина карточки фиксированная: под неё же подогнан холст с моделью. */
+  grid-template-columns: repeat(auto-fill, 180px);
+  justify-content: start;
   gap: 14px;
   margin: 10px 0 8px;
 }
 
 .shop-card {
+  /* Цвет качества задаётся классом ниже и красит и рамку, и свет за моделью. */
+  --rarity: #9a9aa2;
+  --rarity-deep: #4a4a52;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  /* Свет качества заливает всю карточку: и модель, и подпись с ценой стоят
+     прямо в нём, без отдельной панели снизу. */
+  background: radial-gradient(
+    circle at 50% 34%,
+    var(--rarity) 0%,
+    var(--rarity-deep) 66%,
+    #1b1b20 100%
+  );
+  color: #ffffff;
+  box-shadow:
+    0 0 0 var(--px) var(--rarity),
+    0 0 0 calc(var(--px) * 2) var(--outline),
+    var(--drop);
+}
+
+/* Модель стоит во весь верх карточки. */
+.shop-card-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+}
+
+.shop-card .skin-preview {
+  background: transparent;
+}
+
+.shop-card-foot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 12px 10px;
-  background: #b9b9be;
-  box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-hi),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-    0 0 0 var(--px) var(--outline);
-}
-
-/* Модель на витрине стоит в утопленной нише, как предмет в слоте. */
-.shop-card .skin-preview {
-  background: var(--slot);
-  box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-lo),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--sunk-hi),
-    0 0 0 var(--px) var(--outline);
+  gap: 8px;
+  padding: 0 10px 12px;
 }
 
 .shop-card-name {
   font-size: 13px;
   text-align: center;
   overflow-wrap: anywhere;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
 }
 
-/* Качество читается по цвету рамки — как на витринах в играх. */
+/* На тёмном фоне карточки серая приписка не читается. */
+.shop-card .muted {
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.shop-card-foot .Button {
+  width: 100%;
+}
+
+/* Качество читается по цвету — как на витринах в играх. */
 .shop-card.rarity-green {
-  box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-hi),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-    0 0 0 var(--px) #4b9c2e,
-    0 0 0 calc(var(--px) * 2) var(--outline);
+  --rarity: #63c23a;
+  --rarity-deep: #2f6b1c;
 }
 
 .shop-card.rarity-blue {
-  box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-hi),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-    0 0 0 var(--px) #3b7fd4,
-    0 0 0 calc(var(--px) * 2) var(--outline);
+  --rarity: #4f9bec;
+  --rarity-deep: #1d4c86;
 }
 
 .shop-card.rarity-purple {
-  box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-hi),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-    0 0 0 var(--px) #9b4fd0,
-    0 0 0 calc(var(--px) * 2) var(--outline);
+  --rarity: #b061e8;
+  --rarity-deep: #5a2585;
 }
 
 .shop-card.rarity-legendary {
-  box-shadow:
-    inset var(--px) var(--px) 0 0 var(--stone-hi),
-    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
-    0 0 0 var(--px) #e8a02a,
-    0 0 0 calc(var(--px) * 2) var(--outline);
+  --rarity: #ffc44d;
+  --rarity-deep: #a35f10;
 }
 
 /* --- Пункт магазина в панели --- */

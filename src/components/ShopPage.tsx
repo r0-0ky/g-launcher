@@ -76,39 +76,41 @@ export function ShopPage({ onBought }: Props) {
               <div key={item.id} className={`shop-card rarity-${item.rarity}`}>
                 {/* Скин показываем на модели целиком, плащ — поверх того, во
                     что игрок одет: иначе не понять, как он будет смотреться. */}
-                <SkinPreview
-                  skin={item.kind === "cape" ? (shop.wearing?.skin ?? null) : item.url}
-                  cape={item.kind === "cape" ? item.url : null}
-                  model={item.kind === "cape" ? (shop.wearing?.model ?? "classic") : item.model}
-                  width={120}
-                  height={170}
-                  rotate
-                  locked
-                />
-                <div className="shop-card-name">{item.name}</div>
-                <div className="muted small">
-                  {RARITY_NAMES[item.rarity] ?? item.rarity}
+                <div
+                  className="shop-card-art"
+                  title={RARITY_NAMES[item.rarity] ?? item.rarity}
+                >
+                  <SkinPreview
+                    skin={item.kind === "cape" ? (shop.wearing?.skin ?? null) : item.url}
+                    cape={item.kind === "cape" ? item.url : null}
+                    model={item.kind === "cape" ? (shop.wearing?.model ?? "classic") : item.model}
+                    width={180}
+                    height={240}
+                    rotate
+                    locked
+                  />
                 </div>
 
-                {item.owned ? (
-                  <span className="muted small">Куплено</span>
-                ) : (
-                  <Button
-                    variant="primary"
-                    onClick={() => buy(item.id)}
-                    disabled={
-                      busy === item.id || (shop?.coins ?? 0) < item.price
-                    }
-                    title={
-                      (shop?.coins ?? 0) < item.price
-                        ? `Не хватает ${item.price - (shop?.coins ?? 0)} G-коинов`
-                        : undefined
-                    }
-                  >
-                    <img className="coin" src={coin} alt="" />
-                    {item.price}
-                  </Button>
-                )}
+                <div className="shop-card-foot">
+                  <div className="shop-card-name">{item.name}</div>
+                  {item.owned ? (
+                    <span className="muted small">Куплено</span>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      onClick={() => buy(item.id)}
+                      disabled={busy === item.id || (shop?.coins ?? 0) < item.price}
+                      title={
+                        (shop?.coins ?? 0) < item.price
+                          ? `Не хватает ${item.price - (shop?.coins ?? 0)} G-коинов`
+                          : undefined
+                      }
+                    >
+                      <img className="coin" src={coin} alt="" />
+                      {item.price}
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
