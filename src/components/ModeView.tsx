@@ -131,9 +131,12 @@ export function ModeView({
         <button className="ghost-button" onClick={onOpenFolder}>
           Папка режима
         </button>
-        <button className="ghost-button danger" onClick={onDelete} disabled={busy || running}>
-          Удалить
-        </button>
+        {/* Удалять нечего, пока сборка не установлена — кнопку не показываем вовсе. */}
+        {report?.installed && (
+          <button className="ghost-button danger" onClick={onDelete} disabled={busy || running}>
+            Удалить
+          </button>
+        )}
       </div>
     </section>
   );

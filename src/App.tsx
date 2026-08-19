@@ -36,6 +36,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [introDone, setIntroDone] = useState(false);
+  // Взводится, когда пошёл первый кадр заставки — по нему стартует песня.
+  const [introStarted, setIntroStarted] = useState(false);
   // Выбор «музыка выкл» запоминается между запусками.
   const [musicOff, setMusicOff] = useState(() => localStorage.getItem("gandoni-music-off") === "1");
   const musicRef = useRef<HTMLAudioElement>(null);
@@ -117,6 +119,9 @@ export default function App() {
       return;
     }
 
+    // До первого кадра заставки не играем: иначе песня уходит вперёд видео.
+    if (!introStarted) return;
+
     audio.muted = false;
     audio.volume = 0.5;
     // Клик по кнопке — это уже жест, поэтому play() почти всегда проходит.
@@ -131,7 +136,15 @@ export default function App() {
       window.addEventListener("pointerdown", start, { once: true });
       window.addEventListener("keydown", start, { once: true });
     });
-  }, [musicOff]);
+  }, [musicOff, introStarted]);
+
+  // Момент, когда видео заставки реально пошло: отматываем песню в начало,
+  // чтобы она и картинка стартовали с одной точки.
+  const handleIntroStart = useCallback(() => {
+    const audio = musicRef.current;
+    if (audio) audio.currentTime = 0;
+    setIntroStarted(true);
+  }, []);
 
   useEffect(() => {
     const unlisteners: Array<Promise<() => void>> = [
@@ -223,7 +236,7 @@ export default function App() {
       {/* Живёт всё время работы лаунчера — музыка не прерывается между экранами. */}
       <audio ref={musicRef} src={themeAudio} loop preload="auto" />
 
-      {!introDone && <Intro onFinish={() => setIntroDone(true)} />}
+      {!introDone && <Intro onStart={handleIntroStart} onFinish={() => setIntroDone(true)} />}
       <div className={`app${introDone ? " revealed" : " pre-intro"}`}>
       <Bubbles />
       <Sidebar
