@@ -293,7 +293,7 @@ export default function App() {
         )}
 
         {screen === "shop" ? (
-          <ShopPage onBought={refreshCoins} />
+          <ShopPage onBought={refreshCoins} coins={coins} />
         ) : screen === "account" && bootstrap ? (
           <AccountPage
             accounts={bootstrap.accounts}

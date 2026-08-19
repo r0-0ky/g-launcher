@@ -14,6 +14,8 @@ import coin from "../assets/coin.png";
 interface Props {
   /** Обновить страницу аккаунта после покупки, если она открыта. */
   onBought?: () => void;
+  /** Кошелёк, уже известный лаунчеру: показываем его, пока витрина едет. */
+  coins?: number | null;
 }
 
 const RARITY_NAMES: Record<string, string> = {
@@ -23,7 +25,7 @@ const RARITY_NAMES: Record<string, string> = {
   legendary: "Легендарное",
 };
 
-export function ShopPage({ onBought }: Props) {
+export function ShopPage({ onBought, coins }: Props) {
   const [shop, setShop] = useState<Shop | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
@@ -86,7 +88,7 @@ export function ShopPage({ onBought }: Props) {
         <h2>Магазин</h2>
         <span className="wallet" title="G-коины">
           <img src={coin} alt="" />
-          {shop?.coins ?? 0}
+          {shop?.coins ?? coins ?? 0}
         </span>
       </header>
 

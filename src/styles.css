@@ -1513,7 +1513,9 @@ input:focus {
 
 .account-page {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  /* Заголовок стоит на месте, прокручиваются сами панели. */
+  overflow: hidden;
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
@@ -1535,6 +1537,8 @@ input:focus {
 }
 
 .account-columns {
+  flex: 1;
+  min-height: 0;
   display: grid;
   /* Слева всё управление, справа — модель; она шире не становится.
      Обе колонки одной высоты — её задаёт та, что длиннее. */
@@ -1560,6 +1564,9 @@ input:focus {
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+  /* Настройки длиннее окна — прокручиваем их, а не всю страницу. */
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .account-side {
@@ -1568,6 +1575,8 @@ input:focus {
   align-items: center;
   justify-content: center;
   gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* Узкое окно: модель уезжает наверх, колонки складываются. */
