@@ -12,6 +12,10 @@ interface Props {
 }
 
 export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props) {
+  // Вошёл — кнопку входа не показываем. Чтобы войти заново (например, если
+  // сессия протухла), аккаунт достаточно удалить из списка.
+  const signedIn = accounts.some((account) => account.kind === "gland");
+
   // Аккаунт G Land без ника: играть с таким нельзя, поэтому просим выбрать.
   const needsNickname = accounts.some(
     (account) => account.id === activeId && account.kind === "gland" && !account.username
@@ -108,19 +112,21 @@ export function AccountDialog({ accounts, activeId, onClose, onChanged }: Props)
 
         <div className="divider" />
 
-        <div className="field">
-          <span>Вход</span>
-          {glandWaiting ? (
-            <div className="device-code">
-              <div>Подтвердите вход в Telegram — нажмите «Start» у бота.</div>
-              <div className="muted">Ждём подтверждения…</div>
-            </div>
-          ) : (
-            <Button variant="secondary" onClick={startGLand}>
-              Войти через Telegram
-            </Button>
-          )}
-        </div>
+        {!signedIn && (
+          <div className="field">
+            <span>Вход</span>
+            {glandWaiting ? (
+              <div className="device-code">
+                <div>Подтвердите вход в Telegram — нажмите «Start» у бота.</div>
+                <div className="muted">Ждём подтверждения…</div>
+              </div>
+            ) : (
+              <Button variant="secondary" onClick={startGLand}>
+                Войти через Telegram
+              </Button>
+            )}
+          </div>
+        )}
 
         {needsNickname && (
           <label className="field">
