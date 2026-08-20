@@ -5,6 +5,7 @@ import { Button } from "./McButton";
 import { PurchaseReveal } from "./PurchaseReveal";
 import { Loader } from "./Loader";
 import { SkinPreview } from "./SkinPreview";
+import { SkinShot } from "./SkinShot";
 import coin from "../assets/coin.png";
 
 /**
@@ -184,15 +185,13 @@ export function ShopPage({ onBought, coins }: Props) {
                   className="shop-card-art"
                   title={RARITY_NAMES[item.rarity] ?? item.rarity}
                 >
-                  <SkinPreview
+                  <SkinShot
                     skin={item.kind === "cape" ? (shop.wearing?.skin ?? null) : item.url}
                     cape={item.kind === "cape" ? item.url : null}
                     model={item.kind === "cape" ? (shop.wearing?.model ?? "classic") : item.model}
                     width={240}
                     height={310}
-                    locked
                     bust
-                    pose
                     angle={item.kind === "cape" ? 2.4 : -0.5}
                   />
                 </div>

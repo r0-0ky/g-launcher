@@ -83,6 +83,10 @@ export function SkinPreview({
 
     return () => {
       viewer.dispose();
+      // dispose() освобождает ресурсы, но сам контекст WebGL держит до сборки
+      // мусора. В WebKit их на страницу около десятка, и после нескольких
+      // переходов новые превью переставали появляться — отпускаем сразу.
+      viewer.renderer.forceContextLoss();
       viewerRef.current = null;
     };
   }, [width, height, rotate, locked, bust, angle, pose]);
