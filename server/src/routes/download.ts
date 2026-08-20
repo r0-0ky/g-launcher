@@ -414,8 +414,10 @@ const page = `<!doctype html>
   @keyframes splash-beat { from { transform: rotate(-16deg) scale(1); } to { transform: rotate(-16deg) scale(1.09); } }
 
   .menu { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-  /* Квадратные кнопки по краям выходят за колонку, как в игровом меню. */
-  .row2 { display: flex; gap: 8px; margin: 0 -50px; }
+  /* Квадратные кнопки по краям выходят за колонку, как в игровом меню. Вынос
+     считается от их ширины с зазором — иначе средние кнопки не встают вровень
+     с колонкой. */
+  .row2 { --side: 46px; --gap: 8px; display: flex; gap: var(--gap); margin: 0 calc(-1 * (var(--side) + var(--gap))); }
   .row2 .Button { flex: 1; }
 
   /* --- Кнопка меню --- */
@@ -436,7 +438,7 @@ const page = `<!doctype html>
       var(--drop);
   }
   .Button:disabled { cursor: not-allowed; opacity: 0.6; }
-  .Button.square { width: 46px; flex: 0 0 46px; padding: 12px 0; font-size: 18px; }
+  .Button.square { width: var(--side, 46px); flex: 0 0 var(--side, 46px); padding: 12px 0; font-size: 18px; }
 
   /* --- Панель содержимого --- */
   .panel {
@@ -526,9 +528,8 @@ const page = `<!doctype html>
     .screen { gap: 10px; }
     .screen-title { font-size: 20px; }
     .Button { padding: 12px 12px; font-size: 15px; }
-    .Button.square { width: 40px; flex: 0 0 40px; }
     /* На узком экране выступать некуда — прижимаем к колонке. */
-    .row2 { margin: 0; }
+    .row2 { --side: 40px; margin: 0; }
     .panel { padding: 12px; }
     /* Три вкладки должны уместиться в ряд даже на узком экране. */
     .os-tabs { gap: 6px; }

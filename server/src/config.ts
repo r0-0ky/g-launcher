@@ -14,8 +14,11 @@ export const config = {
    * Если пусто, берётся из заголовков запроса.
    */
   publicUrl: (process.env.PUBLIC_URL ?? "").replace(/\/+$/, ""),
-  /** Репозиторий вида `owner/repo` — из его релизов берётся страница /download. */
-  githubRepo: (process.env.GITHUB_REPO ?? "").trim(),
+  /**
+   * Репозиторий вида `owner/repo` — из его релизов берётся страница /download.
+   * По умолчанию наш: без переменной страница загрузок молча оставалась пустой.
+   */
+  githubRepo: (process.env.GITHUB_REPO ?? "r0-0ky/g-launcher").trim(),
   /** Необязательный токен: поднимает лимит GitHub API с 60 до 5000 запросов в час. */
   githubToken: (process.env.GITHUB_TOKEN ?? "").trim(),
   /** Максимальный размер загружаемого файла. */
