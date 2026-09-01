@@ -1,9 +1,13 @@
-import { useEffect, useRef } from "react";
-import { IdleAnimation, SkinViewer } from "skinview3d";
+import { useEffect, useRef, useState } from "react";
+import { IdleAnimation, type SkinViewer } from "skinview3d";
+import { releaseStage, takeStage } from "../skinStage";
 
 /**
  * Объёмный предпросмотр скина: то же, что видно в игре, только можно
  * покрутить мышью. Плащ, если надет, показывается вместе со скином.
+ *
+ * Своего холста у предпросмотра нет: на весь лаунчер один живой просмотрщик,
+ * и его холст переезжает сюда, пока экран открыт (см. skinStage).
  */
 interface Props {
   /** Адрес текстуры скина. Пусто — показывать нечего. */
@@ -39,18 +43,23 @@ export function SkinPreview({
   angle = 0,
   pose = false,
 }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const holderRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<SkinViewer | null>(null);
+  // Счётчик заездов просмотрщика: по нему заново грузятся скин и плащ, ведь
+  // при возврате холста общий просмотрщик отдаёт текстуры.
+  const [claimed, setClaimed] = useState(0);
 
-  // Просмотрщик создаётся один раз: пересоздавать его на каждую смену скина —
-  // значит каждый раз поднимать заново весь WebGL-контекст.
   useEffect(() => {
-    if (!canvasRef.current) return;
+    const holder = holderRef.current;
+    if (!holder) return;
 
-    const viewer = new SkinViewer({ canvas: canvasRef.current, width, height });
+    // Общий просмотрщик мог не подняться — тогда на месте модели остаётся
+    // пустая ниша, но экран работает как ни в чём не бывало.
+    const viewer = takeStage(width, height);
+    if (!viewer) return;
+
+    holder.appendChild(viewer.canvas);
     viewer.animation = pose ? null : new IdleAnimation();
-    viewer.controls.enableZoom = false;
-    viewer.controls.enablePan = false;
     viewer.controls.enableRotate = !locked;
     viewer.autoRotate = rotate;
     viewer.autoRotateSpeed = 1.2;
@@ -80,19 +89,11 @@ export function SkinPreview({
     }
 
     viewerRef.current = viewer;
+    setClaimed((count) => count + 1);
 
     return () => {
-      // dispose() освобождает ресурсы, но сам контекст WebGL держит до сборки
-      // мусора. В WebKit их на страницу около десятка, и после нескольких
-      // переходов новые превью переставали появляться — отпускаем сразу.
-      // Ошибка при уборке не должна ронять экран, поэтому глушим её здесь.
-      try {
-        viewer.dispose();
-        viewer.renderer.forceContextLoss();
-      } catch {
-        // Контекст уже потерян — уборка не нужна.
-      }
       viewerRef.current = null;
+      releaseStage(viewer, holder);
     };
   }, [width, height, rotate, locked, bust, angle, pose]);
 
@@ -116,7 +117,7 @@ export function SkinPreview({
 
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [reveal, angle]);
+  }, [reveal, angle, claimed]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -128,7 +129,7 @@ export function SkinPreview({
     } else {
       viewer.resetSkin();
     }
-  }, [skin, model]);
+  }, [skin, model, claimed]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -136,7 +137,7 @@ export function SkinPreview({
 
     if (cape) void viewer.loadCape(cape);
     else viewer.resetCape();
-  }, [cape]);
+  }, [cape, claimed]);
 
-  return <canvas className="skin-preview" ref={canvasRef} width={width} height={height} />;
+  return <div className="skin-preview" ref={holderRef} style={{ width, height }} />;
 }

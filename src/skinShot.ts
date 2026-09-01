@@ -33,7 +33,19 @@ function keyOf(options: ShotOptions): string {
   return [skin, cape, model, angle, width, height, bust].join("|");
 }
 
+function contextLost(view: SkinViewer): boolean {
+  try {
+    return view.renderer.getContext().isContextLost();
+  } catch {
+    return true;
+  }
+}
+
 function ensureViewer(width: number, height: number): SkinViewer {
+  // Контекст могли отобрать, пока лаунчер был на других экранах: с потерянным
+  // движок рисует пустоту, поэтому поднимаем заново.
+  if (viewer && contextLost(viewer)) viewer = null;
+
   if (!viewer) {
     viewer = new SkinViewer({
       canvas: document.createElement("canvas"),
@@ -79,6 +91,10 @@ export function skinShot(options: ShotOptions): Promise<string> {
     body.rightLeg.rotation.x = -0.16;
 
     view.render();
+    // Пустой кадр в кэш не кладём: иначе карточка так и останется без модели
+    // до перезапуска, даже когда контекст вернётся.
+    if (contextLost(view)) throw new Error("контекст WebGL потерян при съёмке");
+
     const image = view.canvas.toDataURL("image/png");
     cache.set(key, image);
     return image;
