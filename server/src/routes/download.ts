@@ -1,5 +1,6 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -58,6 +59,19 @@ interface Release {
 
 const CACHE_MS = 5 * 60 * 1000;
 let cache: { at: number; value: Release } | null = null;
+
+/**
+ * Куда на GitHub ведёт каждый файл релиза.
+ *
+ * Страница отдаёт ссылки только на нас: `browser_download_url` уводит на
+ * `objects.githubusercontent.com`, а он доступен не отовсюду — в России
+ * загрузка обрывалась. Сам GitHub сервер уже опрашивает, поэтому файл он
+ * дотянет и перельёт клиенту.
+ *
+ * Записи не чистим при обновлении релиза: их считанные штуки, зато ссылка с
+ * открытой полчаса назад страницы продолжает работать.
+ */
+const sources = new Map<string, string>();
 
 /** Файлы обновлялки и подписи на странице не нужны — их качает сам лаунчер. */
 function isInstaller(name: string): boolean {
@@ -118,9 +132,10 @@ async function fetchLatest(): Promise<Release> {
     if (!isInstaller(asset.name)) continue;
     const os = classify(asset.name);
     if (!os) continue;
+    sources.set(asset.name, asset.browser_download_url);
     value.assets[os].push({
       name: asset.name,
-      url: asset.browser_download_url,
+      url: "/download/file/" + encodeURIComponent(asset.name),
       size: asset.size,
     });
   }
@@ -143,6 +158,64 @@ export async function downloadRoutes(app: FastifyInstance): Promise<void> {
       if (cache) return cache.value;
       return reply.code(502).send({ error: "не удалось получить релиз с GitHub" });
     }
+  });
+
+  /**
+   * Установщик, перелитый через нас. Скачать можно только то, что есть в
+   * релизе: имя ищется в `sources`, произвольный адрес сюда не подставить.
+   */
+  app.get<{ Params: { name: string } }>("/download/file/:name", async (request, reply) => {
+    const { name } = request.params;
+    // Ссылку могли открыть со страницы, загруженной до нового релиза — тогда
+    // спрашиваем GitHub заново и ищем ещё раз.
+    if (!sources.has(name)) {
+      try {
+        await fetchLatest();
+      } catch (error) {
+        app.log.error(error);
+      }
+    }
+
+    const source = sources.get(name);
+    if (!source) return reply.code(404).send({ error: "файла нет в релизе" });
+
+    const headers: Record<string, string> = { "user-agent": "gandoni-launcher-server" };
+    // Докачку браузера пропускаем на GitHub как есть.
+    if (typeof request.headers.range === "string") headers.range = request.headers.range;
+    // Токен сюда не кладём: запрос уезжает редиректом на файловый хост, и он
+    // получил бы наш ключ вместе с ним.
+
+    let upstream: Response;
+    try {
+      upstream = await fetch(source, { headers, redirect: "follow" });
+    } catch (error) {
+      app.log.error(error);
+      return reply.code(502).send({ error: "GitHub недоступен" });
+    }
+
+    if (upstream.status === 416) {
+      return reply.code(416).send({ error: "диапазон за пределами файла" });
+    }
+    if (!upstream.ok || !upstream.body) {
+      app.log.error(`GitHub отдал ${upstream.status} на ${name}`);
+      return reply.code(502).send({ error: "не удалось забрать файл с GitHub" });
+    }
+
+    reply
+      .code(upstream.status)
+      .header("accept-ranges", "bytes")
+      // Имя релиза не меняется, а вот файл под ним после перевыпуска может —
+      // кэшировать установщик у клиента себе дороже.
+      .header("cache-control", "no-store")
+      .header("content-disposition", `attachment; filename="${name.replace(/["\\]/g, "")}"`)
+      .type("application/octet-stream");
+
+    const length = upstream.headers.get("content-length");
+    if (length) reply.header("content-length", length);
+    const range = upstream.headers.get("content-range");
+    if (range) reply.header("content-range", range);
+
+    return reply.send(Readable.fromWeb(upstream.body as Parameters<typeof Readable.fromWeb>[0]));
   });
 
   app.get("/download", async (_request, reply) => {
