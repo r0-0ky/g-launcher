@@ -67,6 +67,27 @@ fn find_binary(dir: &Path) -> Option<PathBuf> {
     candidates.into_iter().find(|path| path.exists())
 }
 
+/// Чем спрашивать версию: `javaw.exe` окна не открывает, но и в перехваченный
+/// вывод не пишет — про версию спрашиваем консольную java рядом с ним.
+fn probe_binary(binary: &Path) -> PathBuf {
+    if cfg!(target_os = "windows") {
+        let console = binary.with_file_name("java.exe");
+        if console.exists() {
+            return console;
+        }
+    }
+    binary.to_path_buf()
+}
+
+/// Запускается ли эта среда вообще.
+///
+/// Наличия `bin/java` мало: если загрузка оборвалась после него, рядом не будет
+/// `lib/modules`, и такая java падает ещё до первой строки кода — «Failed
+/// setting boot class path». Спрашиваем версию: ответила — среда цела.
+fn runtime_works(binary: &Path) -> bool {
+    probe_major_version(&probe_binary(binary)).is_some()
+}
+
 /// Скачивает среду выполнения нужной версии от Mojang (компоненты вида `java-runtime-gamma`).
 pub async fn ensure_runtime(
     client: &Client,
@@ -78,7 +99,13 @@ pub async fn ensure_runtime(
     let target_dir = paths.java_dir().join(os_key).join(component);
 
     if let Some(binary) = find_binary(&target_dir) {
-        return Ok(binary);
+        if runtime_works(&binary) {
+            return Ok(binary);
+        }
+        // Среда недокачана: раньше мы возвращали её как есть, и игрок навсегда
+        // застревал на «Failed setting boot class path» — недостающие файлы уже
+        // никто не запрашивал. Идём за списком заново, докачается нехватка.
+        progress.stage("Java", "Среда выполнения повреждена — докачиваем");
     }
 
     progress.stage("Java", &format!("Загружаем среду выполнения {component}"));
@@ -143,17 +170,39 @@ pub async fn ensure_runtime(
         }
     }
 
-    find_binary(&target_dir).ok_or_else(|| {
+    let binary = find_binary(&target_dir).ok_or_else(|| {
         Error::msg(format!(
             "не нашли исполняемый файл java в {}",
             target_dir.display()
         ))
-    })
+    })?;
+
+    // Докачали, но среда всё равно не стартует — честно скажем об этом здесь,
+    // иначе игрок увидит невнятную ошибку виртуальной машины на установке
+    // режима. Наверху есть запасной путь: системная Java.
+    if !runtime_works(&binary) {
+        return Err(Error::msg(format!(
+            "среда выполнения {component} не запускается; удалите {} и повторите",
+            target_dir.display()
+        )));
+    }
+
+    Ok(binary)
 }
 
 /// Мажорная версия java по выводу `java -version`.
 pub fn probe_major_version(java: &Path) -> Option<u32> {
-    let output = std::process::Command::new(java).arg("-version").output().ok()?;
+    let mut command = std::process::Command::new(java);
+    command.arg("-version");
+
+    #[cfg(windows)]
+    {
+        // Иначе на каждую проверку мигает чёрное окно консоли.
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let output = command.output().ok()?;
     let text = format!(
         "{}{}",
         String::from_utf8_lossy(&output.stderr),
@@ -226,5 +275,54 @@ pub async fn resolve(
                  Установите Java {required_major} и укажите путь в настройках."
             ))
         }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Кладёт в `dir/bin` подставную java из shell-скрипта.
+    #[cfg(unix)]
+    fn fake_java(dir: &Path, body: &str) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+
+        let bin = dir.join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let path = bin.join("java");
+        std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        path
+    }
+
+    /// Обрубок среды: файл на месте, но виртуальная машина не поднимается.
+    /// Раньше такую java лаунчер отдавал как готовую, и установка режима падала
+    /// на «Failed setting boot class path» до самого удаления папки вручную.
+    #[cfg(unix)]
+    #[test]
+    fn broken_runtime_is_not_accepted() {
+        let dir = std::env::temp_dir().join(format!("gandoni-java-{}", uuid::Uuid::new_v4()));
+        let java = fake_java(
+            &dir,
+            "echo 'Error occurred during initialization of VM' >&2\n\
+             echo 'Failed setting boot class path.' >&2\nexit 1",
+        );
+
+        assert!(find_binary(&dir).is_some(), "исполняемый файл на месте");
+        assert!(!runtime_works(&java), "но средой такое считать нельзя");
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn healthy_runtime_reports_its_version() {
+        let dir = std::env::temp_dir().join(format!("gandoni-java-{}", uuid::Uuid::new_v4()));
+        let java = fake_java(&dir, "echo 'openjdk version \"21.0.3\" 2024-04-16' >&2");
+
+        assert!(runtime_works(&java));
+        assert_eq!(probe_major_version(&java), Some(21));
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }
