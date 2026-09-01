@@ -15,8 +15,8 @@ server {
     ssl_certificate     /etc/letsencrypt/live/launcher.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/launcher.example.com/privkey.pem;
 
-    # Моды весят десятки мегабайт — иначе загрузка в админке упрётся в лимит.
-    client_max_body_size 600m;
+    # Размер мода не ограничиваем: сам сервер тоже не ограничивает.
+    client_max_body_size 0;
 
     # Раздача jar-ов идёт потоком, ускорения от буферизации нет.
     proxy_buffering off;

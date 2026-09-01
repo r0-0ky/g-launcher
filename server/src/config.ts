@@ -21,8 +21,15 @@ export const config = {
   githubRepo: (process.env.GITHUB_REPO ?? "r0-0ky/g-launcher").trim(),
   /** Необязательный токен: поднимает лимит GitHub API с 60 до 5000 запросов в час. */
   githubToken: (process.env.GITHUB_TOKEN ?? "").trim(),
-  /** Максимальный размер загружаемого файла. */
-  maxUploadBytes: Number(process.env.MAX_UPLOAD_MB ?? 512) * 1024 * 1024,
+  /**
+   * Максимальный размер загружаемого файла. По умолчанию не ограничен: сборки
+   * с тяжёлыми модами упирались в потолок на ровном месте. `MAX_UPLOAD_MB`
+   * задаёт предел, если он всё же нужен, — например под лимит прокси впереди.
+   */
+  maxUploadBytes:
+    Number(process.env.MAX_UPLOAD_MB) > 0
+      ? Number(process.env.MAX_UPLOAD_MB) * 1024 * 1024
+      : Infinity,
   sessionTtlMs: Number(process.env.SESSION_TTL_HOURS ?? 24) * 3600 * 1000,
 
   /** Бот, через которого игроки входят: токен от @BotFather. */

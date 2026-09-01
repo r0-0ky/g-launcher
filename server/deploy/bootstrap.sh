@@ -63,8 +63,6 @@ SERVER_IMAGE=ghcr.io/r0-0ky/g-launcher/server:latest
 # Токен из Cloudflare Zero Trust → Networks → Tunnels → Install connector.
 TUNNEL_TOKEN=
 
-# Cloudflare режет тело запроса на 100 МБ — просим админку ругаться заранее.
-MAX_UPLOAD_MB=95
 ENV
 fi
 
