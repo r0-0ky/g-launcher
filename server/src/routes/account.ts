@@ -487,9 +487,20 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
     const account = await requireAccount(request, reply);
     if (!account) return;
 
+    // Подбираем застрявшее: игрок мог закрыть лаунчер, не дождавшись, или
+    // уведомление банка не дошло. Спрашиваем банк сам — и, если платёж всё-таки
+    // прошёл, монеты появятся к моменту, когда страница откроется.
+    const stuck = queries.paymentsOf
+      .all(account.id)
+      .filter((payment) => payment.status !== "paid" && payment.payment_id)
+      .slice(0, 5);
+    if (stuck.length) await Promise.all(stuck.map((payment) => refresh(payment)));
+
+    const owner = queries.accountById.get(account.id) ?? account;
+
     return {
       available: tbankReady,
-      coins: account.coins ?? 0,
+      coins: owner.coins ?? 0,
       packs: queries.coinPacks.all().map((pack) => ({
         id: pack.id,
         name: pack.name,
