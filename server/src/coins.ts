@@ -37,13 +37,16 @@ export function reject(payment: CoinPaymentRow): void {
 }
 
 /**
- * Свежее состояние платежа. Если он всё ещё ждёт, спрашиваем банк напрямую —
+ * Свежее состояние платежа. Пока он не оплачен, спрашиваем банк напрямую —
  * уведомление могло не дойти, а игрок в это время смотрит на экран оплаты.
  *
- * Ошибку связи с банком глушим: платёж остаётся ждущим, лаунчер спросит снова.
+ * Отклонённые тоже переспрашиваем: отказ карты не конец истории, на форме банка
+ * можно ввести другую, и оплата придёт по тому же заказу.
+ *
+ * Ошибку связи с банком глушим: платёж остаётся как был, лаунчер спросит снова.
  */
 export async function refresh(payment: CoinPaymentRow): Promise<CoinPaymentRow> {
-  if (payment.status !== "pending" || !payment.payment_id) return payment;
+  if (payment.status === "paid" || !payment.payment_id) return payment;
 
   try {
     const status = await paymentState(payment.payment_id);

@@ -36,10 +36,10 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
   /** Только что зачисленное — показываем, пока игрок не закроет. */
   const [paid, setPaid] = useState<number | null>(null);
   /**
-   * Платёж, который банк отклонил. Экран оплаты при этом не закрываем: чаще
-   * всего это просто не прошла карта, и человек хочет попробовать другую.
+   * Банк отклонил карту. Ожидание при этом не прекращаем: на его форме можно
+   * ввести другую, и оплата придёт по тому же заказу — сервер её зачтёт.
    */
-  const [declined, setDeclined] = useState<CoinPack | null>(null);
+  const [declined, setDeclined] = useState(false);
   const [starting, setStarting] = useState<number | null>(null);
 
   const reload = useCallback(async () => {
@@ -88,10 +88,9 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
           setBalance(status.balance);
           onPaidRef.current();
         } else if (status.status === "failed") {
-          // Повторить тот же платёж нельзя — у банка его номер уже занят,
-          // поэтому предлагаем оплатить заново, а не молча выходим на витрину.
-          setPending(null);
-          setDeclined(pending.pack);
+          // Ждать не перестаём: отказ карты — не конец, человек может ввести
+          // другую прямо там же. Просто говорим об этом.
+          setDeclined(true);
         }
       } catch (err) {
         // Связь моргнула — спросим на следующем круге, платёж никуда не денется.
@@ -108,7 +107,7 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
   async function pay(pack: CoinPack) {
     setStarting(pack.id);
     setError(null);
-    setDeclined(null);
+    setDeclined(false);
     try {
       const started = await api.glandBuyCoins(pack.id);
       await openUrl(started.url);
@@ -149,36 +148,42 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
         </div>
       )}
 
-      {declined && (
-        <div className="coins-waiting">
-          <div className="coins-text">
-            <b>Карта не прошла</b>
-            <div className="muted small">
-              Банк отклонил оплату «{declined.name}». Если деньги списались, он их
-              вернёт. Попробуйте другую карту.
-            </div>
-          </div>
-          <Button
-            variant="primary"
-            onClick={() => pay(declined)}
-            disabled={starting === declined.id}
-          >
-            {starting === declined.id ? "Открываем…" : "Оплатить снова"}
-          </Button>
-          <Button variant="secondary" onClick={() => setDeclined(null)}>
-            Не сейчас
-          </Button>
-        </div>
-      )}
-
       {pending && (
         <div className="coins-waiting">
-          <Loader label="Ждём оплату…" />
-          <p>
-            Оплата «{pending.pack.name}» открылась в браузере. Закончите там — коины
-            появятся здесь сами.
-          </p>
-          <Button variant="secondary" onClick={() => setPending(null)}>
+          <Loader label={declined ? "Всё ещё ждём…" : "Ждём оплату…"} />
+          <div className="coins-text">
+            {declined ? (
+              <>
+                <b>Карта не прошла</b>
+                <div className="muted small">
+                  Попробуйте другую прямо в окне банка — оплату по этому заказу мы
+                  всё ещё ждём. Если окно закрылось, откройте его заново.
+                </div>
+              </>
+            ) : (
+              <>
+                Оплата «{pending.pack.name}» открылась в браузере. Закончите там —
+                коины появятся здесь сами.
+              </>
+            )}
+          </div>
+
+          {declined && (
+            <Button
+              variant="primary"
+              onClick={() => pay(pending.pack)}
+              disabled={starting === pending.pack.id}
+            >
+              {starting === pending.pack.id ? "Открываем…" : "Открыть заново"}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setPending(null);
+              setDeclined(false);
+            }}
+          >
             Я передумал
           </Button>
         </div>
