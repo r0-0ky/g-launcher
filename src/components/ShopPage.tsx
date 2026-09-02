@@ -6,7 +6,6 @@ import { PurchaseReveal } from "./PurchaseReveal";
 import { Loader } from "./Loader";
 import { SkinPreview } from "./SkinPreview";
 import { SkinShot } from "./SkinShot";
-import { CoinsPage } from "./CoinsPage";
 import coin from "../assets/coin.png";
 
 /**
@@ -18,6 +17,8 @@ interface Props {
   onBought?: () => void;
   /** Кошелёк, уже известный лаунчеру: показываем его, пока витрина едет. */
   coins?: number | null;
+  /** Открыть тарифы пополнения: кошельком в шапке и при нехватке монет. */
+  onTopUp: () => void;
 }
 
 const RARITY_NAMES: Record<string, string> = {
@@ -27,7 +28,7 @@ const RARITY_NAMES: Record<string, string> = {
   legendary: "Легендарное",
 };
 
-export function ShopPage({ onBought, coins }: Props) {
+export function ShopPage({ onBought, coins, onTopUp }: Props) {
   const [shop, setShop] = useState<Shop | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
@@ -36,8 +37,6 @@ export function ShopPage({ onBought, coins }: Props) {
   const shown = shop?.items.find((item) => item.id === picked) ?? null;
   /** Только что купленное: показываем крупно, пока игрок не закроет. */
   const [won, setWon] = useState<{ item: ShopItem; textureId: number | null } | null>(null);
-  /** Страница тарифов: открывается кошельком и нехваткой монет при покупке. */
-  const [topUp, setTopUp] = useState(false);
 
   async function reload() {
     try {
@@ -89,20 +88,6 @@ export function ShopPage({ onBought, coins }: Props) {
     }
   }
 
-  if (topUp) {
-    return (
-      <CoinsPage
-        coins={shop?.coins ?? coins ?? null}
-        onPaid={() => {
-          // Кошелёк вырос: обновим и витрину, и панель слева.
-          void reload();
-          onBought?.();
-        }}
-        onClose={() => setTopUp(false)}
-      />
-    );
-  }
-
   return (
     <section className="shop-page">
       <header className="account-head">
@@ -110,7 +95,7 @@ export function ShopPage({ onBought, coins }: Props) {
         <button
           className="wallet wallet-button"
           title="Пополнить кошелёк"
-          onClick={() => setTopUp(true)}
+          onClick={onTopUp}
         >
           <img src={coin} alt="" />
           {shop?.coins ?? coins ?? 0}
@@ -153,7 +138,7 @@ export function ShopPage({ onBought, coins }: Props) {
               ) : (
                 <Button
                   variant="primary"
-                  onClick={() => (enough(shown.price) ? buy(shown.id) : setTopUp(true))}
+                  onClick={() => (enough(shown.price) ? buy(shown.id) : onTopUp())}
                   disabled={busy === shown.id}
                   title={
                     enough(shown.price)
@@ -242,7 +227,7 @@ export function ShopPage({ onBought, coins }: Props) {
                   <div className="shop-card-buy" onClick={(event) => event.stopPropagation()}>
                     <Button
                       variant="primary"
-                      onClick={() => (enough(item.price) ? buy(item.id) : setTopUp(true))}
+                      onClick={() => (enough(item.price) ? buy(item.id) : onTopUp())}
                       disabled={busy === item.id}
                       title={
                         enough(item.price)

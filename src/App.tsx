@@ -14,6 +14,7 @@ import { Console } from "./components/Console";
 import { SettingsDialog } from "./components/SettingsDialog";
 import { AccountPage } from "./components/AccountPage";
 import { ShopPage } from "./components/ShopPage";
+import { CoinsPage } from "./components/CoinsPage";
 import { Bubbles, Snail, Sponge, Starfish, Jellyfish } from "./components/decor";
 import { Intro } from "./components/Intro";
 import { UpdateBanner } from "./components/UpdateBanner";
@@ -37,8 +38,8 @@ export default function App() {
   // Консоль вызывается из меню режима — по умолчанию её не видно вовсе.
   const [consoleShown, setConsoleShown] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  /** Что показываем в основной области: режим, аккаунт или магазин. */
-  const [screen, setScreen] = useState<"mode" | "account" | "shop">("mode");
+  /** Что показываем в основной области: режим, аккаунт, магазин или тарифы. */
+  const [screen, setScreen] = useState<"mode" | "account" | "shop" | "coins">("mode");
   /** Кошелёк для панели слева. null — аккаунта G Land нет, показывать нечего. */
   const [coins, setCoins] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -268,7 +269,7 @@ export default function App() {
         account={account}
         onAccountClick={() => setScreen("account")}
         onShopClick={() => setScreen("shop")}
-        shopActive={screen === "shop"}
+        shopActive={screen === "shop" || screen === "coins"}
         modeActive={screen === "mode"}
         coins={coins}
         onSettingsClick={() => setShowSettings(true)}
@@ -293,7 +294,17 @@ export default function App() {
         )}
 
         {screen === "shop" ? (
-          <ShopPage onBought={refreshCoins} coins={coins} />
+          <ShopPage
+            onBought={refreshCoins}
+            coins={coins}
+            onTopUp={() => setScreen("coins")}
+          />
+        ) : screen === "coins" ? (
+          <CoinsPage
+            coins={coins}
+            onPaid={refreshCoins}
+            onClose={() => setScreen("shop")}
+          />
         ) : screen === "account" && bootstrap ? (
           <AccountPage
             accounts={bootstrap.accounts}
