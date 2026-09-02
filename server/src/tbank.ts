@@ -1,4 +1,9 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { request as httpsRequest } from "node:https";
+import { dirname, resolve } from "node:path";
+import { rootCertificates } from "node:tls";
+import { fileURLToPath } from "node:url";
 
 import { config } from "./config.js";
 
@@ -54,19 +59,72 @@ export function signature(params: Record<string, unknown>): string {
   return createHash("sha256").update(joined).digest("hex");
 }
 
+/**
+ * Корневой сертификат Минцифры.
+ *
+ * Т-банк, как и прочие российские банки, светит сертификатом от национального
+ * удостоверяющего центра, а его корня нет ни в наборе Node, ни в системном
+ * хранилище: соединение обрывается с `SELF_SIGNED_CERT_IN_CHAIN`, и наружу это
+ * выглядит как «банк не принял платёж».
+ *
+ * Поэтому корень возим с собой и добавляем к обычным — только для запросов в
+ * банк, а не всему процессу: остальным адресам расширенное доверие ни к чему.
+ * Нет файла — работаем на системных, ошибка будет говорить сама за себя.
+ */
+const trustedCa = (() => {
+  const path = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "assets",
+    "russian-trusted-root-ca.pem"
+  );
+  try {
+    return [...rootCertificates, readFileSync(path, "utf8")];
+  } catch {
+    return undefined;
+  }
+})();
+
+/** POST с телом JSON. Своими руками, а не через fetch, ради `ca` выше. */
+function post(url: string, body: string): Promise<{ status: number; text: string }> {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url);
+    const request = httpsRequest(
+      {
+        hostname: target.hostname,
+        port: target.port || 443,
+        path: target.pathname + target.search,
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body),
+        },
+        ca: trustedCa,
+        timeout: 30_000,
+      },
+      (response) => {
+        let text = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => (text += chunk));
+        response.on("end", () => resolve({ status: response.statusCode ?? 0, text }));
+      }
+    );
+
+    request.on("error", reject);
+    request.on("timeout", () => request.destroy(new Error("банк не ответил за 30 секунд")));
+    request.end(body);
+  });
+}
+
 async function call(method: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
   const payload = { ...body, Token: signature(body) };
 
-  const response = await fetch(`${config.tbankApiUrl}/${method}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
+  const response = await post(`${config.tbankApiUrl}/${method}`, JSON.stringify(payload));
+  if (response.status < 200 || response.status >= 300) {
     throw new Error(`Т-банк ответил ${response.status} на ${method}`);
   }
 
-  const data = (await response.json()) as Record<string, unknown>;
+  const data = JSON.parse(response.text) as Record<string, unknown>;
   if (!data.Success) {
     throw new Error(
       `Т-банк отклонил ${method}: ${data.Message ?? ""} ${data.Details ?? ""}`.trim()
