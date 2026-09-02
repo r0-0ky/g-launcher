@@ -187,9 +187,6 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
                 <img className="coin-face" src={coin} alt="" draggable={false} />
                 <div className="coin-amount">{pack.coins}</div>
                 <div className="coin-name">{pack.name}</div>
-                <div className="coin-rate">
-                  {Math.round(perRuble(pack) * 10) / 10} за рубль
-                </div>
 
                 <Button
                   variant="primary"

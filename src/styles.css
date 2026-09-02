@@ -2281,17 +2281,10 @@ img.avatar {
   color: rgba(255, 255, 255, 0.82);
 }
 
-/* Курс мелко и приглушённо: нужен, только чтобы сравнить тарифы между собой. */
-.coin-rate {
-  position: relative;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
-}
-
 .coin-card .Button {
   position: relative;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 /* Ожидание оплаты и её итог: обе плашки стоят над списком тарифов. */
