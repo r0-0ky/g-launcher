@@ -50,8 +50,13 @@ else
 # Пароль входа в админку — обязательно смените на длинный случайный.
 ADMIN_PASSWORD=
 
-# Домен, который отдаёт Cloudflare Tunnel.
+# Домен, на котором стоит сервер. Из него же nginx и certbot берут имя для
+# сертификата, поэтому пишите его точно и со схемой.
 PUBLIC_URL=https://launcher.example.com
+
+# Необязательно: на эту почту Let's Encrypt напишет, если сертификат перестанет
+# продлеваться.
+LETSENCRYPT_EMAIL=
 
 # Репозиторий с релизами лаунчера — для страницы /download.
 GITHUB_REPO=r0-0ky/g-launcher
@@ -59,9 +64,6 @@ GITHUB_REPO=r0-0ky/g-launcher
 # Образ, который выкладывает GitHub Actions. Строку перезаписывает деплой —
 # править руками нужно только для отката на конкретный тег sha-<коммит>.
 SERVER_IMAGE=ghcr.io/r0-0ky/g-launcher/server:latest
-
-# Токен из Cloudflare Zero Trust → Networks → Tunnels → Install connector.
-TUNNEL_TOKEN=
 
 ENV
 fi
@@ -77,11 +79,12 @@ cat <<NEXT
 
 Готово. Осталось:
 
-  1. Заполнить $DEPLOY_PATH/.env — ADMIN_PASSWORD, PUBLIC_URL, GITHUB_REPO
-     и TUNNEL_TOKEN. SERVER_IMAGE проставит деплой.
+  1. Заполнить $DEPLOY_PATH/.env — ADMIN_PASSWORD, PUBLIC_URL, GITHUB_REPO.
+     SERVER_IMAGE проставит деплой.
   2. Положить публичный ключ деплоя в ~$DEPLOY_USER/.ssh/authorized_keys.
-  3. Прописать в Cloudflare публичный хостнейм туннеля на http://gandoni:8080.
-  4. Пушнуть в main — workflow deploy-server сам зальёт compose-файл и поднимет сервис.
+  3. Открыть порты 80 и 443, A-запись домена направить на эту машину.
+  4. Пушнуть в main — деплой зальёт compose с nginx и certbot и всё поднимет.
+     Сертификат выпишется сам, как только домен станет смотреть сюда.
 
 Проверка после первого деплоя:
   cd $DEPLOY_PATH && docker compose ps
