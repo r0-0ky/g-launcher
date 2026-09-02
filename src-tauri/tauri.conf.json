@@ -52,7 +52,8 @@
     "shortDescription": "Лаунчер Minecraft",
     "longDescription": "Лаунчер Minecraft: выбор режима, авто-загрузка версии и модов, обновление и запуск игры.",
     "macOS": {
-      "entitlements": "entitlements.plist"
+      "entitlements": "entitlements.plist",
+      "signingIdentity": "-"
     }
   }
 }
