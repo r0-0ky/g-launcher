@@ -153,13 +153,7 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
           <Loader label={declined ? "Всё ещё ждём…" : "Ждём оплату…"} />
           <div className="coins-text">
             {declined ? (
-              <>
-                <b>Карта не прошла</b>
-                <div className="muted small">
-                  Попробуйте другую прямо в окне банка — оплату по этому заказу мы
-                  всё ещё ждём. Если окно закрылось, откройте его заново.
-                </div>
-              </>
+              <b>Карта не прошла</b>
             ) : (
               <>
                 Оплата «{pending.pack.name}» открылась в браузере. Закончите там —
