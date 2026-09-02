@@ -66,6 +66,28 @@ export interface VersionFile {
   loaders: string[];
 }
 
+/** Тариф пополнения кошелька: сколько коинов за сколько рублей. */
+export interface CoinPack {
+  id: number;
+  name: string;
+  coins: number;
+  /** Целыми рублями. */
+  price: number;
+  /** Плашка вроде «выгодно». Пусто — плашки нет. */
+  badge: string | null;
+  visible: boolean;
+  sortOrder: number;
+}
+
+export interface CoinPackInput {
+  name: string;
+  coins: number;
+  price: number;
+  badge?: string | null;
+  visible?: boolean;
+  sortOrder?: number;
+}
+
 const TOKEN_KEY = "gandoni-admin-token";
 
 export function getToken(): string | null {
@@ -182,6 +204,16 @@ export const api = {
     patch: { name?: string; price?: number; rarity?: Rarity; visible?: boolean; sortOrder?: number }
   ) => request<{ ok: true }>(`/shop/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
   deleteShopItem: (id: number) => request<{ ok: true }>(`/shop/${id}`, { method: "DELETE" }),
+
+  // --- Тарифы пополнения ---
+  coinPacks: () =>
+    request<{ paymentsReady: boolean; packs: CoinPack[] }>("/coin-packs"),
+  addCoinPack: (input: CoinPackInput) =>
+    request<{ ok: true }>("/coin-packs", { method: "POST", body: JSON.stringify(input) }),
+  saveCoinPack: (id: number, patch: Partial<CoinPackInput>) =>
+    request<{ ok: true }>(`/coin-packs/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
+  deleteCoinPack: (id: number) =>
+    request<{ ok: true }>(`/coin-packs/${id}`, { method: "DELETE" }),
 
   players: () => request<PlayerAccount[]>("/accounts"),
   grantCoins: (id: string, delta: number, reason: string) =>

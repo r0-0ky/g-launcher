@@ -1736,10 +1736,16 @@ img.avatar {
   transition: opacity 0.16s ease;
 }
 
-/* Под курсором подпись уступает место кнопке. */
+/* Под курсором подпись уступает место кнопке — но только там, где кнопка есть.
+   На купленном её нет, и прятать название с пометкой «Куплено» не за чем. */
 .shop-card:hover .shop-card-foot,
 .shop-card:focus-within .shop-card-foot {
   opacity: 0;
+}
+
+.shop-card-mine:hover .shop-card-foot,
+.shop-card-mine:focus-within .shop-card-foot {
+  opacity: 1;
 }
 
 .shop-card-name {
@@ -2123,4 +2129,133 @@ img.avatar {
   width: 16px;
   height: 16px;
   image-rendering: pixelated;
+}
+
+/* --- Пополнение кошелька --- */
+
+/* Кошелёк в шапке магазина — кнопка: по ней открываются тарифы. */
+.wallet-button {
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.wallet-button:hover .wallet-plus {
+  background: var(--gold, #ffd45e);
+  color: #2b2b30;
+}
+
+.wallet-plus {
+  margin-left: 4px;
+  padding: 0 5px;
+  background: var(--stone-lo);
+  color: var(--panel-ink);
+}
+
+.coins-page {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 200px);
+  justify-content: start;
+  gap: 14px;
+  margin: 10px 0 8px;
+}
+
+/* Карточка тарифа: сумма крупно, цена — на кнопке, чтобы платить было
+   одним движением и не искать, куда нажать. */
+.coin-card {
+  position: relative;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 14px 14px;
+  color: #ffffff;
+  background: radial-gradient(circle at 50% 30%, #4a4a52 0%, #2b2b30 70%, #1b1b20 100%);
+  box-shadow:
+    0 0 0 var(--px) var(--stone-lo),
+    0 0 0 calc(var(--px) * 2) var(--outline),
+    var(--drop);
+}
+
+/* Самый выгодный по монетам за рубль — золотой рамкой, без лишних слов. */
+.coin-card-best {
+  box-shadow:
+    0 0 0 var(--px) #ffd45e,
+    0 0 0 calc(var(--px) * 2) var(--outline),
+    var(--drop);
+}
+
+.coin-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 2px 8px;
+  font-size: 12px;
+  background: #ffd45e;
+  color: #2b2b30;
+}
+
+.coin-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 26px;
+  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.coin-amount img {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+}
+
+.coin-name {
+  text-align: center;
+  overflow-wrap: anywhere;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.coin-card .Button {
+  width: 100%;
+}
+
+/* Ожидание оплаты и её итог: обе плашки стоят над списком тарифов. */
+.coins-waiting,
+.coins-done {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: var(--panel);
+  color: var(--panel-ink);
+  box-shadow:
+    inset var(--px) var(--px) 0 0 var(--stone-hi),
+    inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--stone-lo),
+    0 0 0 var(--px) var(--outline);
+}
+
+.coins-waiting p {
+  margin: 0;
+  flex: 1;
+}
+
+.coins-done img {
+  width: 26px;
+  height: 26px;
+  image-rendering: pixelated;
+}
+
+.coins-done div {
+  flex: 1;
 }

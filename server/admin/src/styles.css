@@ -663,3 +663,32 @@ table.files tr:first-child td {
 .players tr:last-child td {
   border-bottom: none;
 }
+
+/* Тарифы пополнения: те же правила, что у списка игроков, плюс шапка и узкие
+   поля ввода — цифры в них короткие, растягивать колонки незачем. */
+.packs {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.packs th {
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: normal;
+  color: var(--muted);
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.packs td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.packs tr:last-child td {
+  border-bottom: none;
+}
+
+.packs input[type="number"] {
+  width: 84px;
+}

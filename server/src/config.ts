@@ -60,12 +60,29 @@ export const config = {
    * скинами отправляем прямо туда, и трафик мимо нас.
    */
   r2PublicUrl: (process.env.R2_PUBLIC_URL ?? "").replace(/\/+$/, ""),
+
+  /** Т-банк: приём карт за G-коины. Не задан — пополнение просто не показывается. */
+  tbankTerminalKey: (process.env.TBANK_TERMINAL_KEY ?? "").trim(),
+  tbankPassword: (process.env.TBANK_PASSWORD ?? "").trim(),
+  tbankApiUrl: (process.env.TBANK_API_URL ?? "https://securepay.tinkoff.ru/v2").replace(
+    /\/+$/,
+    ""
+  ),
+  /**
+   * Куда Т-банк вернёт игрока после оплаты. Платит он в браузере, а результат
+   * лаунчер узнаёт опросом, поэтому страница нужна только чтобы человеку было
+   * понятно, что всё прошло. Пусто — покажется страница самого банка.
+   */
+  tbankReturnUrl: (process.env.TBANK_RETURN_URL ?? "").trim(),
 };
 
 /** R2 включается, только когда заданы все четыре значения. */
 export const r2Ready = Boolean(
   config.r2AccountId && config.r2Bucket && config.r2AccessKeyId && config.r2SecretAccessKey
 );
+
+/** Пополнение кошелька включается, только когда терминал настроен целиком. */
+export const tbankReady = Boolean(config.tbankTerminalKey && config.tbankPassword);
 
 /** Вход через Telegram включается, только если бот настроен целиком. */
 export const telegramReady = Boolean(config.telegramBotToken && config.telegramBotName);

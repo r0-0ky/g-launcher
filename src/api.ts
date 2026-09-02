@@ -155,6 +155,38 @@ export interface Library {
   capes: Texture[];
 }
 
+/** Тариф пополнения кошелька: сколько коинов за сколько рублей. */
+export interface CoinPack {
+  id: number;
+  name: string;
+  coins: number;
+  /** Целыми рублями. */
+  price: number;
+  /** Плашка вроде «выгодно». Пусто — плашки нет. */
+  badge: string | null;
+}
+
+export interface CoinPacks {
+  /** Приём карт настроен на сервере. Нет — показывать нечего. */
+  available: boolean;
+  coins: number;
+  packs: CoinPack[];
+}
+
+/** Начатая оплата: ссылку открываем в браузере, по id узнаём, чем кончилось. */
+export interface PaymentStart {
+  id: string;
+  url: string;
+}
+
+export interface PaymentStatus {
+  id: string;
+  status: "pending" | "paid" | "failed";
+  coins: number;
+  /** Кошелёк после начисления. */
+  balance: number;
+}
+
 export interface GLandLogin {
   /** Одноразовый код: по нему лаунчер опрашивает сервер. */
   token: string;
@@ -186,6 +218,10 @@ export const api = {
   /** Магазин: витрина и покупка за G-коины. */
   glandShop: () => invoke<Shop>("gland_shop"),
   glandBuy: (id: number) => invoke<Library>("gland_buy", { id }),
+  /** Пополнение кошелька: тарифы, оплата картой и опрос её исхода. */
+  glandCoinPacks: () => invoke<CoinPacks>("gland_coin_packs"),
+  glandBuyCoins: (pack: number) => invoke<PaymentStart>("gland_buy_coins", { pack }),
+  glandPaymentStatus: (id: string) => invoke<PaymentStatus>("gland_payment_status", { id }),
   glandSelectTexture: (id: number) => invoke<Library>("gland_select_texture", { id }),
   glandClearTexture: (kind: "skin" | "cape") =>
     invoke<Library>("gland_clear_texture", { kind }),

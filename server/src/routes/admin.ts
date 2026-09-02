@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 
 import { login, logout, requireAuth } from "../auth.js";
+import { tbankReady } from "../config.js";
 import { createMode, db, queries, saveMode } from "../db.js";
 import { loaderVersions, minecraftVersions } from "../loaders.js";
 import { buildManifest } from "../manifest.js";
@@ -531,6 +532,96 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
       if (!item) return reply.code(404).send({ error: "вещь не найдена" });
 
       queries.dropShopItem.run(item.id);
+      return { ok: true };
+    });
+
+    /** Тарифы пополнения кошелька. */
+    secured.get("/coin-packs", async () => ({
+      /** Без настроенного терминала тарифы бессмысленны — скажем об этом. */
+      paymentsReady: tbankReady,
+      packs: queries.allCoinPacks.all().map((pack) => ({
+        id: pack.id,
+        name: pack.name,
+        coins: pack.coins,
+        price: pack.price,
+        badge: pack.badge,
+        visible: Boolean(pack.visible),
+        sortOrder: pack.sort_order,
+      })),
+    }));
+
+    secured.post<{
+      Body: {
+        name?: string;
+        coins?: number;
+        price?: number;
+        badge?: string | null;
+        visible?: boolean;
+        sortOrder?: number;
+      };
+    }>("/coin-packs", async (request, reply) => {
+      const name = (request.body.name ?? "").trim();
+      if (!name) return reply.code(400).send({ error: "нужно название" });
+
+      const coins = Math.round(Number(request.body.coins ?? 0));
+      const price = Math.round(Number(request.body.price ?? 0));
+      if (coins < 1) return reply.code(400).send({ error: "коинов должно быть больше нуля" });
+      if (price < 1) return reply.code(400).send({ error: "цена должна быть больше нуля" });
+
+      queries.addCoinPack.run({
+        name,
+        coins,
+        price,
+        badge: (request.body.badge ?? "").trim() || null,
+        visible: request.body.visible === false ? 0 : 1,
+        sort_order: Math.round(Number(request.body.sortOrder ?? 0)),
+      });
+      return { ok: true };
+    });
+
+    secured.put<{
+      Params: { id: string };
+      Body: {
+        name?: string;
+        coins?: number;
+        price?: number;
+        badge?: string | null;
+        visible?: boolean;
+        sortOrder?: number;
+      };
+    }>("/coin-packs/:id", async (request, reply) => {
+      const pack = queries.coinPack.get(Number(request.params.id));
+      if (!pack) return reply.code(404).send({ error: "тариф не найден" });
+
+      const coins = Math.round(Number(request.body.coins ?? pack.coins));
+      const price = Math.round(Number(request.body.price ?? pack.price));
+      if (coins < 1) return reply.code(400).send({ error: "коинов должно быть больше нуля" });
+      if (price < 1) return reply.code(400).send({ error: "цена должна быть больше нуля" });
+
+      queries.updateCoinPack.run({
+        id: pack.id,
+        name: (request.body.name ?? pack.name).trim(),
+        coins,
+        price,
+        badge:
+          request.body.badge === undefined
+            ? pack.badge
+            : (request.body.badge ?? "").trim() || null,
+        visible: request.body.visible === undefined ? pack.visible : request.body.visible ? 1 : 0,
+        sort_order: Math.round(Number(request.body.sortOrder ?? pack.sort_order)),
+      });
+      return { ok: true };
+    });
+
+    /**
+     * Убрать тариф. Уже оплаченные пополнения это не трогает: их сумма и
+     * количество монет записаны в самом платеже.
+     */
+    secured.delete<{ Params: { id: string } }>("/coin-packs/:id", async (request, reply) => {
+      const pack = queries.coinPack.get(Number(request.params.id));
+      if (!pack) return reply.code(404).send({ error: "тариф не найден" });
+
+      queries.dropCoinPack.run(pack.id);
       return { ok: true };
     });
 

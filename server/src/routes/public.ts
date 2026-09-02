@@ -3,14 +3,54 @@ import { statSync } from "node:fs";
 import type { FastifyInstance } from "fastify";
 
 import { config, r2Ready } from "../config.js";
+import { reject, settle } from "../coins.js";
 import { queries } from "../db.js";
 import { buildManifest } from "../manifest.js";
 import { getSkin, skinUrl } from "../skins.js";
 import { storagePath } from "../storage.js";
+import { statusOf, verifyNotification } from "../tbank.js";
 import { originOf } from "../util.js";
 
 export async function publicRoutes(app: FastifyInstance): Promise<void> {
   app.get("/health", async () => ({ ok: true }));
+
+  /**
+   * Уведомление Т-банка об исходе платежа.
+   *
+   * Ходит сюда сам банк, без нашей авторизации, поэтому единственное, чему
+   * можно верить, — подпись. Отвечать надо строкой `OK`: иначе банк считает
+   * уведомление недоставленным и повторяет его по нарастающей.
+   */
+  app.post<{ Body: Record<string, unknown> }>("/webhook/tbank", async (request, reply) => {
+    const data = request.body ?? {};
+
+    if (!verifyNotification(data)) {
+      request.log.warn({ order: data.OrderId }, "Т-банк: подпись уведомления не сошлась");
+      return reply.code(403).send("FORBIDDEN");
+    }
+
+    const payment = queries.payment.get(String(data.OrderId ?? ""));
+    if (!payment) {
+      request.log.warn({ order: data.OrderId }, "Т-банк: платёж не найден");
+      // Отвечаем OK: платежа у нас нет, и повторы ничего не изменят.
+      return reply.send("OK");
+    }
+
+    const status = statusOf(data.Status);
+    if (status === "confirmed") {
+      // Начисление одноразовое: повтор уведомления вернёт false и пройдёт мимо.
+      if (settle(payment)) {
+        request.log.info(
+          { order: payment.id, coins: payment.coins },
+          "Т-банк: пополнение зачислено"
+        );
+      }
+    } else if (status === "failed") {
+      reject(payment);
+    }
+
+    return reply.send("OK");
+  });
 
   /** То, за чем ходит лаунчер. Кэш выключен: манифест должен меняться сразу. */
   app.get("/manifest.json", async (request, reply) => {

@@ -2,10 +2,12 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import { config, telegramReady } from "../config.js";
+import { config, tbankReady, telegramReady } from "../config.js";
+import { refresh } from "../coins.js";
 import { db, queries } from "../db.js";
 import { iconUrl, randomItemIcon } from "../icons.js";
 import { dropSkin, inspectTexture, putSkin, skinUrl } from "../skins.js";
+import { initPayment } from "../tbank.js";
 import { originOf } from "../util.js";
 import { vanillaSkin } from "../vanilla.js";
 import { loginUrl, sendMessage } from "../telegram.js";
@@ -475,6 +477,100 @@ export async function accountRoutes(app: FastifyInstance): Promise<void> {
 
     const fresh = queries.accountById.get(account.id) as AccountRow;
     return { coins: fresh.coins ?? 0, ...libraryOf(fresh, originOf(request)) };
+  });
+
+  /**
+   * Тарифы пополнения кошелька. Отдаём и когда оплата не настроена: лаунчеру
+   * надо чем-то объяснить игроку, почему кнопок нет.
+   */
+  app.get("/me/coins/packs", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    return {
+      available: tbankReady,
+      coins: account.coins ?? 0,
+      packs: queries.coinPacks.all().map((pack) => ({
+        id: pack.id,
+        name: pack.name,
+        coins: pack.coins,
+        price: pack.price,
+        badge: pack.badge,
+      })),
+    };
+  });
+
+  /**
+   * Начать оплату тарифа. В ответе — ссылка на страницу банка: лаунчер открывает
+   * её в браузере и дальше опрашивает статус платежа.
+   */
+  app.post<{ Params: { id: string } }>("/me/coins/packs/:id/pay", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    if (!tbankReady) {
+      return reply.code(503).send({ error: "оплата не настроена" });
+    }
+
+    const pack = queries.coinPack.get(Number(request.params.id));
+    if (!pack || !pack.visible) return reply.code(404).send({ error: "тариф не найден" });
+
+    // Строку заводим до похода в банк: её идентификатор и есть OrderId, а без
+    // записи не за что было бы зацепить уведомление, приди оно первым.
+    const id = randomUUID();
+    queries.addPayment.run({
+      id,
+      account_id: account.id,
+      pack_id: pack.id,
+      coins: pack.coins,
+      price: pack.price,
+    });
+
+    try {
+      const init = await initPayment({
+        orderId: id,
+        priceRub: pack.price,
+        description: `${pack.coins} G-коинов — ${pack.name}`,
+        notificationUrl: `${originOf(request)}/webhook/tbank`,
+      });
+      queries.setPaymentRef.run({
+        id,
+        payment_id: init.paymentId,
+        payment_url: init.paymentUrl,
+      });
+      return { id, url: init.paymentUrl };
+    } catch (error) {
+      // Ссылку получить не вышло — платить нечем, помечаем сразу, чтобы он не
+      // висел ждущим и не опрашивался впустую.
+      queries.markFailed.run(id);
+      request.log.error(error);
+      return reply.code(502).send({ error: "банк не принял платёж, попробуйте позже" });
+    }
+  });
+
+  /**
+   * Чем кончилась оплата. Лаунчер зовёт это по кругу, пока игрок платит; если
+   * уведомление от банка не дошло, статус спросится у банка напрямую.
+   */
+  app.get<{ Params: { id: string } }>("/me/coins/payments/:id", async (request, reply) => {
+    const account = await requireAccount(request, reply);
+    if (!account) return;
+
+    const payment = queries.payment.get(request.params.id);
+    if (!payment || payment.account_id !== account.id) {
+      return reply.code(404).send({ error: "платёж не найден" });
+    }
+
+    const fresh = await refresh(payment);
+    const owner = queries.accountById.get(account.id) as AccountRow;
+
+    return {
+      id: fresh.id,
+      status: fresh.status,
+      coins: fresh.coins,
+      /** Кошелёк после начисления — лаунчеру не надо запрашивать отдельно. */
+      balance: owner.coins ?? 0,
+    };
   });
 
   app.post("/me/logout", async (request, reply) => {

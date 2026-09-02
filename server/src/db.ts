@@ -3,6 +3,8 @@ import Database from "better-sqlite3";
 import { ensureDataDirs, paths } from "./config.js";
 import type {
   AccountRow,
+  CoinPackRow,
+  CoinPaymentRow,
   ModeFileRow,
   ModeInput,
   ModeRow,
@@ -173,6 +175,48 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_ledger_account ON coin_ledger(account_id, created_at);
 
+  -- Тарифы пополнения: сколько коинов за сколько рублей. Правятся из админки.
+  CREATE TABLE IF NOT EXISTS coin_packs (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT NOT NULL,
+    coins      INTEGER NOT NULL,
+    -- Цена целыми рублями: копейки в тарифах никому не нужны, а в Т-банк
+    -- уходит уже пересчитанная сумма.
+    price      INTEGER NOT NULL,
+    -- Плашка вроде «выгодно» или «популярный выбор». Пусто — плашки нет.
+    badge      TEXT,
+    visible    INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Попытки оплаты. Коины начисляются ровно один раз — при переходе
+  -- pending -> paid, и только внутри транзакции, иначе повторное уведомление
+  -- от банка начислило бы их дважды.
+  --
+  -- id генерируем сами и им же представляемся банку как OrderId: у банка он
+  -- должен быть уникален на терминале навсегда, а автоинкремент повторится,
+  -- если базу когда-нибудь пересоздадут.
+  CREATE TABLE IF NOT EXISTS coin_payments (
+    id          TEXT PRIMARY KEY,
+    account_id  TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    -- Тариф мог исчезнуть из витрины, поэтому связь без ссылки, а цену и
+    -- количество монет держим прямо здесь.
+    pack_id     INTEGER,
+    coins       INTEGER NOT NULL,
+    price       INTEGER NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending', 'paid', 'failed')),
+    -- Идентификатор платежа на стороне банка: по нему спрашиваем статус,
+    -- если уведомление не дошло.
+    payment_id  TEXT,
+    payment_url TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    paid_at     TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_payments_account ON coin_payments(account_id, created_at);
+
   -- Настройки сервера: пока это скин и плащ, которые выдаются новичкам.
   CREATE TABLE IF NOT EXISTS settings (
     key   TEXT PRIMARY KEY,
@@ -325,6 +369,48 @@ export const queries = {
   ),
   addPurchase: db.prepare(
     `INSERT INTO purchases (account_id, item_id, price) VALUES (?, ?, ?)`
+  ),
+
+  coinPacks: db.prepare<[], CoinPackRow>(
+    `SELECT * FROM coin_packs WHERE visible = 1 ORDER BY sort_order, price`
+  ),
+  allCoinPacks: db.prepare<[], CoinPackRow>(
+    `SELECT * FROM coin_packs ORDER BY sort_order, price`
+  ),
+  coinPack: db.prepare<[number], CoinPackRow>(`SELECT * FROM coin_packs WHERE id = ?`),
+  addCoinPack: db.prepare(
+    `INSERT INTO coin_packs (name, coins, price, badge, visible, sort_order)
+     VALUES (@name, @coins, @price, @badge, @visible, @sort_order)`
+  ),
+  updateCoinPack: db.prepare(
+    `UPDATE coin_packs SET name = @name, coins = @coins, price = @price, badge = @badge,
+     visible = @visible, sort_order = @sort_order WHERE id = @id`
+  ),
+  dropCoinPack: db.prepare(`DELETE FROM coin_packs WHERE id = ?`),
+
+  addPayment: db.prepare(
+    `INSERT INTO coin_payments (id, account_id, pack_id, coins, price)
+     VALUES (@id, @account_id, @pack_id, @coins, @price)`
+  ),
+  payment: db.prepare<[string], CoinPaymentRow>(`SELECT * FROM coin_payments WHERE id = ?`),
+  setPaymentRef: db.prepare(
+    `UPDATE coin_payments SET payment_id = @payment_id, payment_url = @payment_url
+     WHERE id = @id`
+  ),
+  /**
+   * Отметить оплаченным. Условие `status = 'pending'` тут не для красоты: это
+   * оно делает начисление одноразовым, сколько бы раз банк ни повторил
+   * уведомление. Вызывающий смотрит на число изменённых строк.
+   */
+  markPaid: db.prepare(
+    `UPDATE coin_payments SET status = 'paid', paid_at = datetime('now')
+     WHERE id = ? AND status = 'pending'`
+  ),
+  markFailed: db.prepare(
+    `UPDATE coin_payments SET status = 'failed' WHERE id = ? AND status = 'pending'`
+  ),
+  paymentsOf: db.prepare<[string], CoinPaymentRow>(
+    `SELECT * FROM coin_payments WHERE account_id = ? ORDER BY created_at DESC LIMIT 20`
   ),
 
   setSkin: db.prepare(

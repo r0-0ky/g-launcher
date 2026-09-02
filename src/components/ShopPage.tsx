@@ -6,6 +6,7 @@ import { PurchaseReveal } from "./PurchaseReveal";
 import { Loader } from "./Loader";
 import { SkinPreview } from "./SkinPreview";
 import { SkinShot } from "./SkinShot";
+import { CoinsPage } from "./CoinsPage";
 import coin from "../assets/coin.png";
 
 /**
@@ -35,6 +36,8 @@ export function ShopPage({ onBought, coins }: Props) {
   const shown = shop?.items.find((item) => item.id === picked) ?? null;
   /** Только что купленное: показываем крупно, пока игрок не закроет. */
   const [won, setWon] = useState<{ item: ShopItem; textureId: number | null } | null>(null);
+  /** Страница тарифов: открывается кошельком и нехваткой монет при покупке. */
+  const [topUp, setTopUp] = useState(false);
 
   async function reload() {
     try {
@@ -60,6 +63,9 @@ export function ShopPage({ onBought, coins }: Props) {
     return () => document.removeEventListener("keydown", escape);
   }, [picked]);
 
+  /** Хватает ли монет. Не хватает — кнопка ведёт на тарифы, а не гаснет. */
+  const enough = (price: number) => (shop?.coins ?? 0) >= price;
+
   async function buy(id: number) {
     setBusy(id);
     setError(null);
@@ -83,14 +89,33 @@ export function ShopPage({ onBought, coins }: Props) {
     }
   }
 
+  if (topUp) {
+    return (
+      <CoinsPage
+        coins={shop?.coins ?? coins ?? null}
+        onPaid={() => {
+          // Кошелёк вырос: обновим и витрину, и панель слева.
+          void reload();
+          onBought?.();
+        }}
+        onClose={() => setTopUp(false)}
+      />
+    );
+  }
+
   return (
     <section className="shop-page">
       <header className="account-head">
         <h2>Магазин</h2>
-        <span className="wallet" title="G-коины">
+        <button
+          className="wallet wallet-button"
+          title="Пополнить кошелёк"
+          onClick={() => setTopUp(true)}
+        >
           <img src={coin} alt="" />
           {shop?.coins ?? coins ?? 0}
-        </span>
+          <span className="wallet-plus">+</span>
+        </button>
       </header>
 
       {error && <div className="error">{error}</div>}
@@ -129,15 +154,19 @@ export function ShopPage({ onBought, coins }: Props) {
               ) : (
                 <Button
                   variant="primary"
-                  onClick={() => buy(shown.id)}
-                  disabled={busy === shown.id || (shop?.coins ?? 0) < shown.price}
+                  onClick={() => (enough(shown.price) ? buy(shown.id) : setTopUp(true))}
+                  disabled={busy === shown.id}
                   title={
-                    (shop?.coins ?? 0) < shown.price
-                      ? `Не хватает ${shown.price - (shop?.coins ?? 0)} G-коинов`
-                      : undefined
+                    enough(shown.price)
+                      ? undefined
+                      : `Не хватает ${shown.price - (shop?.coins ?? 0)} G-коинов`
                   }
                 >
-                  {busy === shown.id ? "Покупаем…" : "Купить"}
+                  {busy === shown.id
+                    ? "Покупаем…"
+                    : enough(shown.price)
+                      ? "Купить"
+                      : "Пополнить"}
                 </Button>
               )}
             </div>
@@ -174,7 +203,7 @@ export function ShopPage({ onBought, coins }: Props) {
             {shop.items.map((item) => (
               <div
                 key={item.id}
-                className={`shop-card rarity-${item.rarity}`}
+                className={`shop-card rarity-${item.rarity}${item.owned ? " shop-card-mine" : ""}`}
                 onClick={() => setPicked(item.id)}
                 role="button"
                 tabIndex={0}
@@ -214,15 +243,19 @@ export function ShopPage({ onBought, coins }: Props) {
                   <div className="shop-card-buy" onClick={(event) => event.stopPropagation()}>
                     <Button
                       variant="primary"
-                      onClick={() => buy(item.id)}
-                      disabled={busy === item.id || (shop?.coins ?? 0) < item.price}
+                      onClick={() => (enough(item.price) ? buy(item.id) : setTopUp(true))}
+                      disabled={busy === item.id}
                       title={
-                        (shop?.coins ?? 0) < item.price
-                          ? `Не хватает ${item.price - (shop?.coins ?? 0)} G-коинов`
-                          : undefined
+                        enough(item.price)
+                          ? undefined
+                          : `Не хватает ${item.price - (shop?.coins ?? 0)} G-коинов`
                       }
                     >
-                      {busy === item.id ? "Покупаем…" : "Купить"}
+                      {busy === item.id
+                        ? "Покупаем…"
+                        : enough(item.price)
+                          ? "Купить"
+                          : "Пополнить"}
                     </Button>
                   </div>
                 )}

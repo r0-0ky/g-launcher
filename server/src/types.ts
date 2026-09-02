@@ -121,3 +121,33 @@ export interface ShopItemRow {
   sort_order: number;
   created_at: string;
 }
+
+/** Тариф пополнения кошелька: сколько коинов за сколько рублей. */
+export interface CoinPackRow {
+  id: number;
+  name: string;
+  coins: number;
+  /** Целыми рублями. */
+  price: number;
+  /** Плашка вроде «выгодно». Пусто — плашки нет. */
+  badge: string | null;
+  visible: number;
+  sort_order: number;
+  created_at: string;
+}
+
+/** Попытка оплаты тарифа картой. */
+export interface CoinPaymentRow {
+  id: string;
+  account_id: string;
+  /** Тариф мог исчезнуть с витрины, поэтому просто число. */
+  pack_id: number | null;
+  coins: number;
+  price: number;
+  status: "pending" | "paid" | "failed";
+  /** Идентификатор платежа на стороне банка. */
+  payment_id: string | null;
+  payment_url: string | null;
+  created_at: string;
+  paid_at: string | null;
+}

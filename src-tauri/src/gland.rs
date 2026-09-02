@@ -337,6 +337,98 @@ pub async fn shop(client: &Client, base: &str, session: &str) -> Result<Shop> {
     Ok(response.json().await?)
 }
 
+/// Тариф пополнения кошелька: сколько коинов за сколько рублей.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoinPack {
+    pub id: i64,
+    pub name: String,
+    pub coins: i64,
+    /// Целыми рублями.
+    pub price: i64,
+    /// Плашка вроде «выгодно». Пусто — плашки нет.
+    pub badge: Option<String>,
+    #[serde(flatten)]
+    pub extra: serde_json::Map<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoinPacks {
+    /// Приём карт настроен на сервере. Нет — показывать нечего.
+    pub available: bool,
+    pub coins: i64,
+    pub packs: Vec<CoinPack>,
+}
+
+/// Начатая оплата: ссылку открываем в браузере, по id спрашиваем, чем кончилось.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentStart {
+    pub id: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentStatus {
+    pub id: String,
+    /// `pending`, `paid` или `failed`.
+    pub status: String,
+    pub coins: i64,
+    /// Кошелёк после начисления — отдельно спрашивать не нужно.
+    pub balance: i64,
+}
+
+/// Тарифы пополнения кошелька.
+pub async fn coin_packs(client: &Client, base: &str, session: &str) -> Result<CoinPacks> {
+    let response = client
+        .get(format!("{base}/api/me/coins/packs"))
+        .bearer_auth(session)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        return Err(fail(response).await);
+    }
+    Ok(response.json().await?)
+}
+
+/// Начать оплату тарифа: в ответе ссылка на страницу банка.
+pub async fn start_payment(
+    client: &Client,
+    base: &str,
+    session: &str,
+    pack: i64,
+) -> Result<PaymentStart> {
+    let response = client
+        .post(format!("{base}/api/me/coins/packs/{pack}/pay"))
+        .bearer_auth(session)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        return Err(fail(response).await);
+    }
+    Ok(response.json().await?)
+}
+
+/// Чем кончилась оплата. Лаунчер спрашивает по кругу, пока игрок платит.
+pub async fn payment_status(
+    client: &Client,
+    base: &str,
+    session: &str,
+    id: &str,
+) -> Result<PaymentStatus> {
+    let response = client
+        .get(format!("{base}/api/me/coins/payments/{id}"))
+        .bearer_auth(session)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        return Err(fail(response).await);
+    }
+    Ok(response.json().await?)
+}
+
 /// Покупка. В ответе — обновлённая библиотека: вещь сразу можно надеть.
 pub async fn buy(client: &Client, base: &str, session: &str, id: i64) -> Result<Library> {
     library(

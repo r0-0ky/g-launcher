@@ -466,6 +466,30 @@ async fn gland_buy(state: State<'_, AppState>, id: i64) -> Result<gland::Library
     gland::buy(&state.client, &base, &session, id).await
 }
 
+/// Тарифы пополнения кошелька.
+#[tauri::command]
+async fn gland_coin_packs(state: State<'_, AppState>) -> Result<gland::CoinPacks> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::coin_packs(&state.client, &base, &session).await
+}
+
+/// Начать оплату тарифа: в ответе ссылка на страницу банка, её открывает лаунчер.
+#[tauri::command]
+async fn gland_buy_coins(state: State<'_, AppState>, pack: i64) -> Result<gland::PaymentStart> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::start_payment(&state.client, &base, &session, pack).await
+}
+
+/// Чем кончилась оплата. Спрашивается по кругу, пока игрок платит в браузере.
+#[tauri::command]
+async fn gland_payment_status(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<gland::PaymentStatus> {
+    let (base, session, _) = gland_session(&state).await?;
+    gland::payment_status(&state.client, &base, &session, &id).await
+}
+
 #[tauri::command]
 async fn gland_set_model(state: State<'_, AppState>, model: String) -> Result<gland::Library> {
     let (base, session, _) = gland_session(&state).await?;
@@ -659,6 +683,9 @@ pub fn run() {
             gland_upload_texture,
             gland_shop,
             gland_buy,
+            gland_coin_packs,
+            gland_buy_coins,
+            gland_payment_status,
             gland_set_model,
             gland_select_texture,
             gland_clear_texture,

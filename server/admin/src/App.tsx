@@ -4,12 +4,13 @@ import { api, errorText, getToken, setToken } from "./api";
 import { Login } from "./components/Login";
 import { ModeForm } from "./components/ModeForm";
 import { ContentTab } from "./components/ContentTab";
+import { CoinsTab } from "./components/CoinsTab";
 import { ShopTab } from "./components/ShopTab";
 
 type Tab = "main" | "content";
 
 /** Админка делится надвое: сборки и магазин косметики. */
-type Screen = "modes" | "shop";
+type Screen = "modes" | "shop" | "coins";
 
 function slugify(value: string): string {
   const map: Record<string, string> = {
@@ -189,6 +190,12 @@ export default function App() {
           >
             Магазин
           </button>
+          <button
+            className={screen === "coins" ? "tab active" : "tab"}
+            onClick={() => setScreen("coins")}
+          >
+            Коины
+          </button>
         </nav>
 
         {screen === "modes" && (
@@ -197,7 +204,7 @@ export default function App() {
           </button>
         )}
 
-        <div className="mode-list" hidden={screen === "shop"}>
+        <div className="mode-list" hidden={screen !== "modes"}>
           {modes.map((mode) => (
             <button
               key={mode.id}
@@ -252,7 +259,15 @@ export default function App() {
           </div>
         )}
 
-        {screen === "shop" ? (
+        {screen === "coins" ? (
+          <CoinsTab
+            onError={setError}
+            onNotice={(message) => {
+              setNotice(message);
+              setTimeout(() => setNotice(null), 2000);
+            }}
+          />
+        ) : screen === "shop" ? (
           <ShopTab
             onError={setError}
             onNotice={(message) => {
