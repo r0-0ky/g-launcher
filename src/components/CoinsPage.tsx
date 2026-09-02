@@ -31,8 +31,13 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  /** Начатая оплата: пока она есть, ждём и опрашиваем. */
-  const [pending, setPending] = useState<{ id: string; pack: CoinPack } | null>(null);
+  /**
+   * Начатая оплата: пока она есть, ждём и опрашиваем. Ссылку держим при себе,
+   * чтобы вернуть игрока на ту же страницу банка, а не заводить второй счёт.
+   */
+  const [pending, setPending] = useState<{ id: string; pack: CoinPack; url: string } | null>(
+    null
+  );
   /** Только что зачисленное — показываем, пока игрок не закроет. */
   const [paid, setPaid] = useState<number | null>(null);
   /**
@@ -111,7 +116,7 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
     try {
       const started = await api.glandBuyCoins(pack.id);
       await openUrl(started.url);
-      setPending({ id: started.id, pack });
+      setPending({ id: started.id, pack, url: started.url });
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -163,12 +168,10 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
           </div>
 
           {declined && (
-            <Button
-              variant="primary"
-              onClick={() => pay(pending.pack)}
-              disabled={starting === pending.pack.id}
-            >
-              {starting === pending.pack.id ? "Открываем…" : "Открыть заново"}
+            // Открываем ту же страницу банка, а не заводим новую оплату: иначе
+            // осталось бы два живых счёта и заплатить можно было бы дважды.
+            <Button variant="primary" onClick={() => void openUrl(pending.url)}>
+              Открыть заново
             </Button>
           )}
           <Button
