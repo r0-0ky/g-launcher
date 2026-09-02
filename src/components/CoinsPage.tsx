@@ -169,18 +169,27 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
 
         {available && packs.length > 0 && (
           <div className="coin-grid">
-            {packs.map((pack) => (
+            {packs.map((pack, index) => (
               <div
                 key={pack.id}
-                className={`coin-card${perRuble(pack) === best ? " coin-card-best" : ""}`}
+                className={[
+                  "coin-card",
+                  // Тарифы приходят от дешёвых к дорогим, поэтому ступень берём
+                  // прямо по месту в списке.
+                  `coin-tier-${Math.min(index + 1, 4)}`,
+                  perRuble(pack) === best ? "coin-card-best" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
               >
                 {pack.badge && <div className="coin-badge">{pack.badge}</div>}
 
-                <div className="coin-amount">
-                  <img src={coin} alt="" />
-                  {pack.coins}
-                </div>
+                <img className="coin-face" src={coin} alt="" draggable={false} />
+                <div className="coin-amount">{pack.coins}</div>
                 <div className="coin-name">{pack.name}</div>
+                <div className="coin-rate">
+                  {Math.round(perRuble(pack) * 10) / 10} за рубль
+                </div>
 
                 <Button
                   variant="primary"

@@ -2157,70 +2157,141 @@ img.avatar {
 
 .coin-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 200px);
+  grid-template-columns: repeat(auto-fill, 248px);
   justify-content: start;
-  gap: 14px;
-  margin: 10px 0 8px;
+  gap: 18px;
+  margin: 12px 0 10px;
 }
 
-/* Карточка тарифа: сумма крупно, цена — на кнопке, чтобы платить было
-   одним движением и не искать, куда нажать. */
+/* Карточка тарифа. Крупная и по одной оси: монета, сумма, название, цена на
+   кнопке — платить можно одним движением, не разглядывая, куда нажать.
+   Цвет задаётся классом ступени ниже: чем дороже тариф, тем он теплее. */
 .coin-card {
+  --tier: #7fb2ff;
+  --tier-deep: #21406f;
   position: relative;
-  width: 200px;
+  width: 248px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 18px 14px 14px;
+  padding: 26px 18px 18px;
+  overflow: hidden;
   color: #ffffff;
-  background: radial-gradient(circle at 50% 30%, #4a4a52 0%, #2b2b30 70%, #1b1b20 100%);
+  background: radial-gradient(
+    circle at 50% 26%,
+    var(--tier) 0%,
+    var(--tier-deep) 60%,
+    #14141a 100%
+  );
   box-shadow:
-    0 0 0 var(--px) var(--stone-lo),
+    0 0 0 var(--px) var(--tier),
     0 0 0 calc(var(--px) * 2) var(--outline),
     var(--drop);
+  transition: transform 0.14s ease;
 }
 
-/* Самый выгодный по монетам за рубль — золотой рамкой, без лишних слов. */
+/* Лучи из-за монеты — как от сундука с добычей. Живут в псевдоэлементе, чтобы
+   не заводить лишнюю разметку, и не перехватывают клики. */
+.coin-card::before {
+  content: "";
+  position: absolute;
+  top: -46px;
+  left: 50%;
+  width: 300px;
+  height: 300px;
+  margin-left: -150px;
+  pointer-events: none;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.14) 0deg 9deg,
+    transparent 9deg 24deg
+  );
+  -webkit-mask-image: radial-gradient(circle, #000 12%, transparent 62%);
+  mask-image: radial-gradient(circle, #000 12%, transparent 62%);
+}
+
+.coin-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Ступени по цене: от холодной к золотой. Дальше четвёртой не идём — тарифов
+   больше четырёх почти не делают, а пятый цвет уже не про иерархию. */
+.coin-tier-2 {
+  --tier: #8ee0a1;
+  --tier-deep: #1f5c36;
+}
+
+.coin-tier-3 {
+  --tier: #c58ef0;
+  --tier-deep: #4d2074;
+}
+
+.coin-tier-4 {
+  --tier: #ffc94d;
+  --tier-deep: #8a4f0c;
+}
+
+/* Самый выгодный по монетам за рубль — светлой рамкой со свечением, без лишних
+   слов. Рамка белая, а не золотая: золотая терялась бы на верхней ступени,
+   которая сама золотая. */
 .coin-card-best {
   box-shadow:
-    0 0 0 var(--px) #ffd45e,
+    0 0 0 var(--px) #ffffff,
     0 0 0 calc(var(--px) * 2) var(--outline),
+    0 0 20px rgba(255, 255, 255, 0.4),
     var(--drop);
 }
 
 .coin-badge {
   position: absolute;
-  top: 0;
-  right: 0;
-  padding: 2px 8px;
+  top: 12px;
+  right: -30px;
+  z-index: 1;
+  width: 120px;
+  padding: 3px 0;
+  transform: rotate(38deg);
+  text-align: center;
   font-size: 12px;
   background: #ffd45e;
   color: #2b2b30;
+  box-shadow: 0 0 0 var(--px) var(--outline);
+}
+
+/* Монета крупно: она здесь главный герой, а не значок при числе. */
+.coin-face {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.45));
 }
 
 .coin-amount {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 26px;
-  text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.55);
-}
-
-.coin-amount img {
-  width: 26px;
-  height: 26px;
-  image-rendering: pixelated;
+  position: relative;
+  font-size: 34px;
+  line-height: 1;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
 }
 
 .coin-name {
+  position: relative;
   text-align: center;
   overflow-wrap: anywhere;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Курс мелко и приглушённо: нужен, только чтобы сравнить тарифы между собой. */
+.coin-rate {
+  position: relative;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .coin-card .Button {
+  position: relative;
   width: 100%;
+  margin-top: 4px;
 }
 
 /* Ожидание оплаты и её итог: обе плашки стоят над списком тарифов. */
