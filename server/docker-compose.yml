@@ -12,43 +12,18 @@ services:
     volumes:
       # База и загруженные моды переживают пересборку контейнера.
       - ./data:/data
-    # Наружу порт не публикуем: снаружи ходит только nginx, он в той же сети.
-    # Для отладки на самой машине можно раскомментировать:
-    # ports:
-    #   - "127.0.0.1:8080:8080"
+    # Портов наружу не публикуем. 80 и 443 на этой машине держит общий
+    # reverse-proxy — он же и раздаёт сертификаты остальным проектам. Мы просто
+    # стоим с ним в одной сети, и он ходит к нам по имени контейнера.
     expose:
       - "8080"
+    networks:
+      - proxy
 
-  nginx:
-    # Держит 80 и 443, отдаёт сертификат и проксирует на gandoni. Конфиг и
-    # скрипт запуска лежат рядом — их кладёт на сервер тот же деплой.
-    image: nginx:1.27-alpine
-    container_name: gandoni-nginx
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./deploy/proxy:/templates:ro
-      - ./letsencrypt:/etc/letsencrypt:ro
-      - ./certbot-webroot:/var/www/certbot:ro
-    entrypoint: ["/bin/sh", "/templates/nginx.sh"]
-    depends_on:
-      - gandoni
-
-  certbot:
-    # Выпускает сертификат и продлевает его. Пока домен не смотрит на эту
-    # машину, попытки идут по кругу раз в минуту — переезд с чужого прокси
-    # сводится к переключению DNS, всё остальное случится само.
-    image: certbot/certbot:latest
-    container_name: gandoni-certbot
-    restart: unless-stopped
-    env_file: .env
-    volumes:
-      - ./deploy/proxy:/templates:ro
-      - ./letsencrypt:/etc/letsencrypt
-      - ./certbot-webroot:/var/www/certbot
-    entrypoint: ["/bin/sh", "/templates/certbot.sh"]
-    depends_on:
-      - nginx
+networks:
+  proxy:
+    # Сеть заводит проект reverse-proxy (`docker network create web`), мы к ней
+    # только подключаемся. Имя можно перебить через PROXY_NETWORK в .env, если
+    # сервер устроен иначе.
+    external: true
+    name: ${PROXY_NETWORK:-web}

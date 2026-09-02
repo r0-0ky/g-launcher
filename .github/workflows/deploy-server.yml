@@ -73,24 +73,16 @@ jobs:
           fi
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Обновить файлы деплоя на сервере
+      - name: Обновить docker-compose.yml на сервере
         env:
           HOST: ${{ secrets.VPS_HOST }}
           USERNAME: ${{ secrets.VPS_USER }}
           PORT: ${{ secrets.VPS_PORT }}
           DEPLOY_PATH: ${{ secrets.VPS_PATH }}
         run: |
-          path="${DEPLOY_PATH:-/srv/g-launcher}"
-
           scp -i ~/.ssh/id_deploy -P "${PORT:-22}" -o BatchMode=yes \
-            server/docker-compose.yml "$USERNAME@$HOST:$path/docker-compose.yml"
-
-          # Конфиг nginx и скрипты сертификата монтируются в контейнеры, поэтому
-          # едут вместе с compose. Через tar, а не scp -r: тот при повторном
-          # запуске кладёт папку внутрь самой себя.
-          tar -C server/deploy -cf - proxy \
-            | ssh -i ~/.ssh/id_deploy -p "${PORT:-22}" -o BatchMode=yes "$USERNAME@$HOST" \
-                "mkdir -p '$path/deploy' && tar -C '$path/deploy' -xf -"
+            server/docker-compose.yml \
+            "$USERNAME@$HOST:${DEPLOY_PATH:-/srv/g-launcher}/docker-compose.yml"
 
       - name: Забрать образ и перезапустить
         env:
