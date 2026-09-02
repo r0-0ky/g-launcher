@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Права сборки под macOS.
+
+  Подписанное приложение работает в hardened runtime, а он режет доступ к
+  микрофону и камере, даже когда пользователь их разрешил, — нужно явно
+  попросить. Микрофон здесь ради модов голосового чата в самой игре: она
+  запускается дочерним процессом и наследует наши права.
+
+  JIT и снятая защита памяти — для Java: без них виртуальная машина не может
+  компилировать байт-код на лету и не запускается вовсе.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.device.camera</key>
+    <true/>
+
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- Java грузит свои библиотеки, подписанные не нами. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+  </dict>
+</plist>

@@ -38,7 +38,9 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
-    "resources": ["resources/quickjoin/*.jar"],
+    "resources": [
+      "resources/quickjoin/*.jar"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -48,6 +50,9 @@
     ],
     "category": "Game",
     "shortDescription": "Лаунчер Minecraft",
-    "longDescription": "Лаунчер Minecraft: выбор режима, авто-загрузка версии и модов, обновление и запуск игры."
+    "longDescription": "Лаунчер Minecraft: выбор режима, авто-загрузка версии и модов, обновление и запуск игры.",
+    "macOS": {
+      "entitlements": "entitlements.plist"
+    }
   }
 }
