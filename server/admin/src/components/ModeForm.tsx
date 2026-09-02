@@ -10,6 +10,36 @@ const LOADERS: Array<{ value: LoaderKind; label: string }> = [
   { value: "neoforge", label: "NeoForge" },
 ];
 
+/** Порт Minecraft по умолчанию: его в адресе не пишут. */
+const DEFAULT_PORT = 25565;
+
+/** Адрес одной строкой: «host» либо «host:port», если порт нестандартный. */
+function serverAddress(mode: Mode): string {
+  if (!mode.serverHost) return "";
+  const port = mode.serverPort;
+  return port && port !== DEFAULT_PORT ? `${mode.serverHost}:${port}` : mode.serverHost;
+}
+
+/**
+ * Разбирает то, что ввели, обратно на хост и порт — храним и отдаём лаунчеру
+ * их по-прежнему раздельно.
+ *
+ * Портом считаем только цифры после последнего двоеточия: так адрес IPv6 вида
+ * `[::1]` остаётся целым, а `mc.example.com:25566` разбирается как надо.
+ */
+function parseAddress(value: string): Pick<Mode, "serverHost" | "serverPort"> {
+  // Хвостовое двоеточие остаётся, пока порт дописывают, — в адрес его не тащим.
+  const address = value.trim().replace(/:$/, "");
+  if (!address) return { serverHost: null, serverPort: null };
+
+  const colon = address.lastIndexOf(":");
+  const tail = colon === -1 ? "" : address.slice(colon + 1);
+  if (colon > 0 && tail && /^\d+$/.test(tail)) {
+    return { serverHost: address.slice(0, colon), serverPort: Number(tail) };
+  }
+  return { serverHost: address, serverPort: null };
+}
+
 interface Props {
   mode: Mode;
   onChange: (mode: Mode) => void;
@@ -168,23 +198,16 @@ export function ModeForm({ mode, onChange }: Props) {
       </label>
 
       <label className="field">
-        <span>Сервер (host / port)</span>
-        <div className="row">
-          <input
-            value={mode.serverHost ?? ""}
-            placeholder="mc.example.com"
-            onChange={(event) => patch({ serverHost: event.target.value || null })}
-          />
-          <input
-            type="number"
-            className="port"
-            value={mode.serverPort ?? ""}
-            placeholder="25565"
-            onChange={(event) =>
-              patch({ serverPort: event.target.value ? Number(event.target.value) : null })
-            }
-          />
-        </div>
+        <span>Адрес сервера</span>
+        <input
+          value={serverAddress(mode)}
+          placeholder="mc.example.com"
+          onChange={(event) => patch(parseAddress(event.target.value))}
+        />
+        <small>
+          Порт дописывается через двоеточие, если он не стандартный. Указан адрес —
+          лаунчер заходит на сервер сразу при запуске игры.
+        </small>
       </label>
 
       <label className="field">

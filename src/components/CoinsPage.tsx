@@ -155,14 +155,14 @@ export function CoinsPage({ coins, onPaid, onClose }: Props) {
 
       {pending && (
         <div className="coins-waiting">
-          <Loader label={declined ? "Всё ещё ждём…" : "Ждём оплату…"} />
+          <Loader label={null} />
           <div className="coins-text">
             {declined ? (
               <b>Карта не прошла</b>
             ) : (
               <>
-                Оплата «{pending.pack.name}» открылась в браузере. Закончите там —
-                коины появятся здесь сами.
+                <b>Ждём оплату</b>
+                <div className="muted small">Закончите на странице банка</div>
               </>
             )}
           </div>
