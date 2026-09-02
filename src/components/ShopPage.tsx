@@ -114,7 +114,6 @@ export function ShopPage({ onBought, coins }: Props) {
         >
           <img src={coin} alt="" />
           {shop?.coins ?? coins ?? 0}
-          <span className="wallet-plus">+</span>
         </button>
       </header>
 

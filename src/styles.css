@@ -2133,23 +2133,16 @@ img.avatar {
 
 /* --- Пополнение кошелька --- */
 
-/* Кошелёк в шапке магазина — кнопка: по ней открываются тарифы. */
+/* Кошелёк в шапке магазина — кнопка: по ней открываются тарифы. Выглядит он
+   ровно как обычный кошелёк, только под курсором чуть светлеет. */
 .wallet-button {
   border: none;
   font: inherit;
   cursor: pointer;
 }
 
-.wallet-button:hover .wallet-plus {
-  background: var(--gold, #ffd45e);
-  color: #2b2b30;
-}
-
-.wallet-plus {
-  margin-left: 4px;
-  padding: 0 5px;
-  background: var(--stone-lo);
-  color: var(--panel-ink);
+.wallet-button:hover {
+  background: var(--stone-hover);
 }
 
 .coins-page {
